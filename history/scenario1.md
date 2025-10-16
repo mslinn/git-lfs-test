@@ -125,6 +125,12 @@ If not present, the test data can be downloaded using the [`git_lfs_test_data` s
 
 The `lfst-scenario` command automates the entire 7-step test procedure. All steps are fully implemented, including GitHub repository creation (using `gh` CLI), `.lfsconfig` file generation, evaluation README generation, and automatic cleanup on failure. Use the `-f` flag to force recreation of existing repositories.
 
+**Repository naming:** The test creates two local repository clones to simulate multiple clients:
+- `repo` - The first repository clone (created in Step 1, used in Steps 1-3 and 6-7)
+- `repo2` - The second repository clone (created in Step 4, used in Steps 4-5)
+
+Both repositories are created in a temporary work directory (e.g., `/tmp/lfst/`).
+
 ```shell
 # List available scenarios
 $ lfst-scenario --list
