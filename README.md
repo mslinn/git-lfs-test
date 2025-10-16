@@ -1,36 +1,224 @@
-# Git LFS Scripts
+# Git LFS Test
 
-These scripts were written along with the miniseries of articles about
-[Git LFS on `mslinn.com`](https://www.mslinn.com/git/5100-git-lfs.html).
-The articles explain how to install and use these scripts.
+Comprehensive testing framework for evaluating Git LFS server implementations.
+
+This framework automates the evaluation of various Git LFS servers through a standardized 7-step test procedure, with full checksum verification and performance tracking.
 
 
-## Commands
+## Overview
 
-* `checksums` Computes and / or compares CRCs with previous values
-* `delete_github_repo` Deletes the given GitHub repo without prompting
-* `set_remotes` Saves `remotes.origin.url` and `lfs.url`
-* `giftless` Run `giftless` server
-* `git_lfs_test_data` Downloads test data and synthesizes small files
-* `git_lfs_test_server` Run `Git LFS Test Server
-* `ls-files` Frontend for `git ls-files`
-* `new_bare_repo` Creates a bare repo
-* `nonlfs` lists files that are not in Git LFS
-* `setup_git_lfs_eval_server` Calls other commands to create directory structures
-  for each evaluation scenario, including bare Git repositories and Git LFS
-  repositories
-* `setup_git_lfs_eval_client` Calls other commands to download test data and
-  clone Git repositories for each scenario
-* `unmigrate` Reverses `git lfs migrate import` for a given wildmatch pattern
+The Git LFS Test framework was developed as part of the [Git LFS evaluation series on mslinn.com](https://www.mslinn.com/git/5100-git-lfs.html). It provides automated testing for:
+
+- **Bare Git repositories** (local and SSH)
+- **LFS Test Server** (HTTP and GitHub)
+- **Giftless** (local and SSH)
+- **Rudolfs** (local and SSH)
+
+
+## Features
+
+- **Automated 7-step test scenarios** covering the complete Git LFS workflow
+- **Remote test data access** via SSH/rsync (no need for local copies)
+- **Checksum verification** at each step using CRC32
+- **GitHub integration** for testing with real GitHub repositories
+- **Configurable database** location (SQLite with WAL mode)
+- **Performance tracking** with millisecond precision
+- **Comprehensive unit tests** for all core functionality
 
 
 ## Installation
 
+### Prerequisites
+
+- Go 1.24.2 or later
+- Git with Git LFS installed
+- SSH access for remote test data (optional)
+- GitHub CLI (`gh`) for GitHub scenarios (optional)
+
+### Install from source
+
 ```shell
-$ git clone https://github.com/mslinn/git_lfs_scripts.git
-$ echo "$(pwd)/git_lfs_scripts/bin:\$PATH" >> ~/.bashrc
-$ source ~/.bashrc
-$ sudo ln -s "$( which ls-files )" /usr/local/bin/lfs-files
-$ sudo ln -s "$( which ls-files )" /usr/local/bin/track
-$ sudo ln -s "$( which ls-files )" /usr/local/bin/untrack
+$ cd /mnt/f/work/git
+$ git clone https://github.com/mslinn/git-lfs-test.git
+$ cd git-lfs-test
+$ make install
 ```
+
+This installs all commands to `/usr/local/bin/`:
+
+- `lfst-scenario` - Execute complete 7-step test scenarios
+- `lfst-checksum` - Compute and store checksums
+- `lfst-import` - Import checksum JSON data
+- `lfst-run` - Manage test run lifecycle
+- `lfst-query` - Query and report on test data
+- `lfst-config` - Manage configuration
+
+
+## Quick Start
+
+1. **Configure the test environment:**
+
+```shell
+$ lfst-config init
+Created config file: /home/mslinn/.lfs-test-config
+
+$ lfst-config set database /path/to/your/test.db
+$ lfst-config set remote_host your-server
+$ lfst-config show
+```
+
+2. **Set up test data:**
+
+You need 2.4GB of test files. Either:
+- Copy them locally to a directory and set `LFS_TEST_DATA` environment variable
+- Access them remotely via SSH: `export LFS_TEST_DATA=server:/path/to/data`
+
+3. **List available scenarios:**
+
+```shell
+$ lfst-scenario --list
+Available scenarios:
+
+ID  Server             Protocol  Git Server  Description
+--  ------             --------  ----------  -----------
+1   bare               local     bare        Bare repo - local
+2   bare               ssh       bare        Bare repo - SSH
+6   lfs-test-server    http      bare        LFS Test Server - HTTP
+7   lfs-test-server    http      github      LFS Test Server - HTTP/GitHub
+...
+```
+
+4. **Run a test scenario:**
+
+```shell
+$ lfst-scenario -d 6
+
+=== Executing Scenario 6: LFS Test Server - HTTP ===
+Server: lfs-test-server via http
+Work directory: /tmp/lfst
+
+Created test run ID: 1
+
+--- Step 1 ---
+Initializing repository...
+  ✓ Initialized in 15ms
+...
+✓ Scenario 6 completed successfully
+```
+
+5. **View results:**
+
+```shell
+$ lfst-run show 1
+$ lfst-query checksums --run-id 1 --step 1
+$ lfst-query stats --run-id 1
+```
+
+
+## Test Scenarios
+
+The framework executes a standardized 7-step test procedure:
+
+1. **Setup**: Create repository, install Git LFS, configure tracking patterns, copy initial test files (1.3GB)
+2. **Initial Push**: Add and commit all files, verify checksums
+3. **Modifications**: Update 4 files, delete 2 files, rename 1 file, commit changes
+4. **Second Clone**: Clone repository to new location, verify checksums match
+5. **Second Client Push**: Create new file in second clone, commit and push
+6. **First Client Pull**: Pull changes from remote, verify checksums
+7. **Untrack**: Remove files from LFS tracking, migrate back to regular Git
+
+For detailed documentation, see [history/scenario1.md](history/scenario1.md).
+
+
+## Configuration
+
+### Configuration File
+
+The framework uses `~/.lfs-test-config` (YAML format):
+
+```yaml
+database: /home/mslinn/lfs_eval/lfs-test.db
+remote_host: gojira
+auto_remote: true
+```
+
+### Environment Variables
+
+Environment variables override config file settings:
+
+- `LFS_TEST_DATA` - Location of test data directory (required)
+- `LFS_TEST_DB` - Database path (optional)
+- `LFS_TEST_CONFIG` - Path to config file (optional)
+- `LFS_REMOTE_HOST` - Remote host for SSH operations (optional)
+- `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0` (optional)
+
+### Command-line Flags
+
+All commands accept a `--db` flag to override the database location:
+
+```shell
+$ lfst-scenario --db /tmp/my-test.db 6
+```
+
+
+## Development
+
+### Build
+
+```shell
+$ make build
+```
+
+### Run tests
+
+```shell
+$ go test ./...
+```
+
+### Run tests with coverage
+
+```shell
+$ go test -cover ./...
+```
+
+
+## Architecture
+
+The framework is organized into several packages:
+
+- `pkg/checksum` - File checksumming with CRC32
+- `pkg/config` - Configuration management
+- `pkg/database` - SQLite database operations with WAL mode
+- `pkg/git` - Git operations (clone, commit, push, pull)
+- `pkg/scenario` - Test scenario execution logic
+- `pkg/testdata` - Test file management with remote support
+- `pkg/timing` - Command execution with timing
+
+
+## Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Write tests for new functionality
+4. Ensure all tests pass (`go test ./...`)
+5. Submit a pull request
+
+
+## License
+
+See the [articles on mslinn.com](https://www.mslinn.com/git/5100-git-lfs.html) for usage and license information.
+
+
+## Support
+
+For issues, questions, or feature requests, please open an issue on GitHub.
+
+
+## Related Projects
+
+- [Git LFS](https://git-lfs.github.com/) - Official Git Large File Storage extension
+- [LFS Test Server](https://github.com/git-lfs/lfs-test-server) - Reference implementation
+- [Giftless](https://github.com/datopian/giftless) - Python-based LFS server
+- [Rudolfs](https://github.com/jasonwhite/rudolfs) - Rust-based LFS server with S3 backend
