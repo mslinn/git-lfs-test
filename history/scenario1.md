@@ -126,7 +126,7 @@ If not present, the test data can be downloaded using the [`git_lfs_test_data` s
 The `lfst-scenario` command automates the entire 7-step test procedure. All steps are fully implemented, including GitHub repository creation (using `gh` CLI), `.lfsconfig` file generation, evaluation README generation, and automatic cleanup on failure. Use the `-f` flag to force recreation of existing repositories.
 
 **Repository naming:** The test creates two local repository clones to simulate multiple clients:
-- `repo` - The first repository clone (created in Step 1, used in Steps 1-3 and 6-7)
+- `repo1` - The first repository clone (created in Step 1, used in Steps 1-3 and 6-7)
 - `repo2` - The second repository clone (created in Step 4, used in Steps 4-5)
 
 Both repositories are created in a temporary work directory (e.g., `/tmp/lfst/`).
@@ -166,7 +166,7 @@ Configuring LFS tracking patterns...
   ✓ Tracked *.mov in 11ms
   ... (more patterns)
 Copying initial test files (v1 - 1.3GB)...
-Copying 7 test files to /tmp/lfst/repo
+Copying 7 test files to /tmp/lfst/repo1
   Copying pdf1.pdf (103.00 MB)
   Copying video1.m4v (116.00 MB)
   ... (more files)
@@ -204,7 +204,7 @@ Stored 6 checksums for step 3
 ✓ Step 3 complete
 
 --- Step 4 ---
-Cloning from /tmp/lfst/repo to /tmp/lfst/repo2...
+Cloning from /tmp/lfst/repo1 to /tmp/lfst/repo2...
   ✓ Cloned in 1234ms
 Computing checksums in second clone...
 Comparing checksums with step 3...

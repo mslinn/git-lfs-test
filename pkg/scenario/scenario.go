@@ -31,7 +31,7 @@ type Runner struct {
 	Debug      bool
 	Force      bool   // Force recreation of existing repositories
 	WorkDir    string // Base directory for test operations
-	RepoDir    string // Repository directory (WorkDir/repo)
+	RepoDir    string // Repository directory (WorkDir/repo1)
 	Repo2Dir   string // Second clone directory (WorkDir/repo2)
 	GitHubURL  string // GitHub clone URL (set during execution if created)
 }
@@ -44,7 +44,7 @@ func NewRunner(scenario *Scenario, db *database.DB, workDir string, debug, force
 		Debug:    debug,
 		Force:    force,
 		WorkDir:  workDir,
-		RepoDir:  workDir + "/repo",
+		RepoDir:  workDir + "/repo1",
 		Repo2Dir: workDir + "/repo2",
 	}
 }
