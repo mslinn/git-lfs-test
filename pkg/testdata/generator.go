@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/mslinn/git-lfs-test/pkg/config"
 )
 
 // FileSpec describes a test file to copy
@@ -161,16 +163,46 @@ func CheckRemoteDir(host, path string) error {
 }
 
 // GetTestDataPath returns the path to the test data directory
-// Searches in multiple locations, prioritizing LFS_TEST_DATA environment variable
+// Searches in multiple locations with priority:
+// 1. LFS_TEST_DATA environment variable
+// 2. test_data from config file (with variable expansion)
+// 3. Hardcoded fallback paths
 // Supports remote paths in format: host:/path (accessed via SSH)
 func GetTestDataPath() (string, error) {
-	candidates := []string{
-		os.Getenv("LFS_TEST_DATA"),
+	candidates := []string{}
+
+	// 1. Check LFS_TEST_DATA environment variable (highest priority)
+	if envPath := os.Getenv("LFS_TEST_DATA"); envPath != "" {
+		expanded := os.ExpandEnv(envPath)
+		// Check if expansion failed (variable undefined)
+		if strings.Contains(expanded, "$") {
+			return "", fmt.Errorf("LFS_TEST_DATA contains undefined environment variable: %s\n"+
+				"Please set the required environment variable (e.g., export work=/your/base/path)", envPath)
+		}
+		candidates = append(candidates, expanded)
+	}
+
+	// 2. Check config file
+	cfg, err := config.Load()
+	if err == nil && cfg.TestDataPath != "" {
+		configPath := cfg.GetTestDataPath()
+		// Check if expansion failed (variable undefined)
+		if strings.Contains(configPath, "$") {
+			return "", fmt.Errorf("test_data in config file contains undefined environment variable: %s\n"+
+				"Please set the required environment variable (e.g., export work=/your/base/path)\n"+
+				"See: https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data", cfg.TestDataPath)
+		}
+		candidates = append(candidates, configPath)
+	}
+
+	// 3. Add hardcoded fallback paths
+	candidates = append(candidates,
 		"/mnt/f/work/git/git_lfs_test_data",
 		"/work/git/git_lfs_test_data",
 		"/home/mslinn/git_lfs_test_data",
-	}
+	)
 
+	// Try each candidate
 	for _, path := range candidates {
 		if path == "" {
 			continue
@@ -195,7 +227,9 @@ func GetTestDataPath() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("test data directory not found (searched: %v)", candidates)
+	return "", fmt.Errorf("test data directory not found (searched: %v)\n"+
+		"Please set LFS_TEST_DATA environment variable or configure test_data in ~/.lfs-test-config\n"+
+		"See: https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data", candidates)
 }
 
 // joinPath joins path components, handling both local and remote paths
