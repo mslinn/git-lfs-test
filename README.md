@@ -64,14 +64,18 @@ Created config file: /home/mslinn/.lfs-test-config
 
 $ lfst-config set database /path/to/your/test.db
 $ lfst-config set remote_host your-server
+$ lfst-config set test_data /mnt/f/work/git/git_lfs_test_data
 $ lfst-config show
 ```
 
 2. **Set up test data:**
 
-You need 2.4GB of test files. Either:
-- Copy them locally to a directory and set `LFS_TEST_DATA` environment variable
-- Access them remotely via SSH: `export LFS_TEST_DATA=server:/path/to/data`
+You need 2.4GB of test files. The test data location can be configured:
+- In the config file: `lfst-config set test_data /path/to/test/data`
+- Via environment variable: `export LFS_TEST_DATA=/path/to/test/data`
+- For remote access via SSH: `export LFS_TEST_DATA=server:/path/to/data`
+
+Default location: `/mnt/f/work/git/git_lfs_test_data`
 
 3. **List available scenarios:**
 
@@ -140,17 +144,18 @@ The framework uses `~/.lfs-test-config` (YAML format):
 database: /home/mslinn/lfs_eval/lfs-test.db
 remote_host: gojira
 auto_remote: true
+test_data: /mnt/f/work/git/git_lfs_test_data
 ```
 
 ### Environment Variables
 
 Environment variables override config file settings:
 
-- `LFS_TEST_DATA` - Location of test data directory (required)
-- `LFS_TEST_DB` - Database path (optional)
-- `LFS_TEST_CONFIG` - Path to config file (optional)
-- `LFS_REMOTE_HOST` - Remote host for SSH operations (optional)
-- `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0` (optional)
+- `LFS_TEST_DATA` - Location of test data directory (overrides `test_data` in config file)
+- `LFS_TEST_DB` - Database path (overrides `database` in config file)
+- `LFS_TEST_CONFIG` - Path to config file (default: `~/.lfs-test-config`)
+- `LFS_REMOTE_HOST` - Remote host for SSH operations (overrides `remote_host` in config file)
+- `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0` (overrides `auto_remote` in config file)
 
 ### Command-line Flags
 

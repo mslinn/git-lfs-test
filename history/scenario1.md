@@ -23,11 +23,12 @@ $ make install
 
 This installs all commands to `/usr/local/bin/`:
 
+- `lfst-scenario` - Execute complete 7-step test scenarios
 - `lfst-checksum` - Compute and store checksums
 - `lfst-import` - Import checksum JSON data
 - `lfst-run` - Manage test run lifecycle
 - `lfst-query` - Query and report on test data
-- `lfst-scenario` - Execute complete 7-step test scenarios
+- `lfst-config` - Manage configuration
 
 The database is created automatically at first use at
 `gojira:/home/mslinn/lfs_eval/lfs-test.db`
@@ -49,6 +50,7 @@ $ cat > ~/.lfs-test-config <<EOF
 database: /home/mslinn/lfs_eval/lfs-test.db
 remote_host: gojira
 auto_remote: true
+test_data: /mnt/f/work/git/git_lfs_test_data
 EOF
 ```
 
@@ -57,17 +59,17 @@ EOF
 
 The test commands use several environment variables for configuration:
 
-**Required for testing:**
+**Configuration (can also be set in config file):**
 
-- `LFS_TEST_DATA` - Location of test data directory (e.g., `/mnt/f/work/git/git_lfs_test_data`)
+- `LFS_TEST_DATA` - Location of test data directory (overrides `test_data` in config file; default: `/mnt/f/work/git/git_lfs_test_data`)
 
 
 **Optional (override config file):**
 
-- `LFS_TEST_DB` - Database path (default: `/home/mslinn/lfs_eval/lfs-test.db`)
+- `LFS_TEST_DB` - Database path (overrides `database` in config file)
 - `LFS_TEST_CONFIG` - Path to config file (default: `~/.lfs-test-config`)
-- `LFS_REMOTE_HOST` - Remote host for SSH operations (default: `gojira`)
-- `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0` (default: `true`)
+- `LFS_REMOTE_HOST` - Remote host for SSH operations (overrides `remote_host` in config file)
+- `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0` (overrides `auto_remote` in config file)
 
 
 **Setting environment variables:**
@@ -409,18 +411,21 @@ $ gh auth login
 Error: test data directory not found (searched: [/mnt/f/work/git/git_lfs_test_data /work/git/git_lfs_test_data ...])
 ```
 
-**Solution:** Set the `LFS_TEST_DATA` environment variable (add to `~/.bashrc` or `~/.zshrc`):
+**Solution:** Set the test data location in your config file or via environment variable:
 
 ```shell
+# Option 1: Set in config file (recommended)
+$ lfst-config set test_data /mnt/f/work/git/git_lfs_test_data
+
+# Option 2: Set environment variable (add to ~/.bashrc or ~/.zshrc)
 export LFS_TEST_DATA=/mnt/f/work/git/git_lfs_test_data  # or your actual path
 lfst-scenario 6
 ```
 
-The commands search for test data in these locations:
+The commands search for test data in these locations (highest priority first):
 1. `$LFS_TEST_DATA` environment variable
-2. `/mnt/f/work/git/git_lfs_test_data` (WSL/Windows)
-3. `/work/git/git_lfs_test_data` (Linux)
-4. `/home/mslinn/git_lfs_test_data` (fallback)
+2. `test_data` setting in `~/.lfs-test-config`
+3. Default: `/mnt/f/work/git/git_lfs_test_data`
 
 ### Remote mode not working
 
