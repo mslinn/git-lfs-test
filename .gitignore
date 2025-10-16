@@ -1,0 +1,12 @@
+*.sublime*
+*.swp
+*.out
+.idea*
+*.iml
+*.tmp
+*~
+~*
+.DS_Store
+.idea
+.claude/
+test-lfs-repo/
