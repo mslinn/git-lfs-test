@@ -10,3 +10,4 @@
 .idea
 .claude/
 test-lfs-repo/
+bin/
