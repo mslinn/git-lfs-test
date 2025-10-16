@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mslinn/git_lfs_scripts/pkg/config"
+	"github.com/mslinn/git-lfs-test/pkg/config"
 	"github.com/spf13/pflag"
 )
 

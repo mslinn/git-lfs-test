@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mslinn/git_lfs_scripts/pkg/database"
-	"github.com/mslinn/git_lfs_scripts/pkg/timing"
+	"github.com/mslinn/git-lfs-test/pkg/database"
+	"github.com/mslinn/git-lfs-test/pkg/timing"
 )
 
 // Context holds the execution context for git operations

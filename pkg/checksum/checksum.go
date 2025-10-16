@@ -10,7 +10,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/mslinn/git_lfs_scripts/pkg/database"
+	"github.com/mslinn/git-lfs-test/pkg/database"
 )
 
 // FileChecksum represents a file's checksum and metadata

@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 
-	"github.com/mslinn/git_lfs_scripts/pkg/checksum"
-	"github.com/mslinn/git_lfs_scripts/pkg/config"
-	"github.com/mslinn/git_lfs_scripts/pkg/database"
+	"github.com/mslinn/git-lfs-test/pkg/checksum"
+	"github.com/mslinn/git-lfs-test/pkg/config"
+	"github.com/mslinn/git-lfs-test/pkg/database"
 	"github.com/spf13/pflag"
 )
 

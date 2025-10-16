@@ -6,8 +6,8 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/mslinn/git_lfs_scripts/pkg/config"
-	"github.com/mslinn/git_lfs_scripts/pkg/database"
+	"github.com/mslinn/git-lfs-test/pkg/config"
+	"github.com/mslinn/git-lfs-test/pkg/database"
 	"github.com/spf13/pflag"
 )
 

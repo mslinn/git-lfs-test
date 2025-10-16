@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/mslinn/git_lfs_scripts/pkg/checksum"
-	"github.com/mslinn/git_lfs_scripts/pkg/database"
-	"github.com/mslinn/git_lfs_scripts/pkg/git"
-	"github.com/mslinn/git_lfs_scripts/pkg/testdata"
-	"github.com/mslinn/git_lfs_scripts/pkg/timing"
+	"github.com/mslinn/git-lfs-test/pkg/checksum"
+	"github.com/mslinn/git-lfs-test/pkg/database"
+	"github.com/mslinn/git-lfs-test/pkg/git"
+	"github.com/mslinn/git-lfs-test/pkg/testdata"
+	"github.com/mslinn/git-lfs-test/pkg/timing"
 )
 
 // Scenario defines a Git LFS test scenario

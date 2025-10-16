@@ -1,4 +1,4 @@
-module github.com/mslinn/git_lfs_scripts
+module github.com/mslinn/git-lfs-test
 
 go 1.24.2
 

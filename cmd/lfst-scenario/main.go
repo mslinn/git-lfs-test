@@ -5,9 +5,9 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/mslinn/git_lfs_scripts/pkg/config"
-	"github.com/mslinn/git_lfs_scripts/pkg/database"
-	"github.com/mslinn/git_lfs_scripts/pkg/scenario"
+	"github.com/mslinn/git-lfs-test/pkg/config"
+	"github.com/mslinn/git-lfs-test/pkg/database"
+	"github.com/mslinn/git-lfs-test/pkg/scenario"
 	"github.com/spf13/pflag"
 )
 
