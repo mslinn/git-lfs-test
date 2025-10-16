@@ -16,19 +16,17 @@ On the aforementioned web page, under the heading "Git Large File System":
   which only exists for testing purposes.
 - This subproject of my website is an unfinished work, which I would like your help with.
 
-The test software at `https://github.com/mslinn/git_lfs_scripts` is stored locally as
-`/mnt/f/work/git/git_lfs_scripts`.
-We will be modifying the local copy of the `git_lfs_scripts` in a branch called `claude`.
+The test software at `https://github.com/mslinn/git-lfs-test` is stored locally as
+`/mnt/f/work/git/git-lfs-test`.
+We will be modifying the local copy of `git-lfs-test` in a branch called `claude`.
 
-- Currently, `git_lfs_scripts` is mostly written in Bash with some Ruby,
-  but those languages seems like poor choices for the data collection and reporting
-  that is required for this subproject.
-  That code should be written in Go and use a small portable database like SQLite.
-  Continue to use Bash for trivial scripts, but use Go whenever practicable.
-  I envision the Go project having several executables.
-- None of the code has been tested; consider all of it aspirational and possibly disjointed.
-  The text in the web pages is more likely to be accurate and complete than the software.
-  Consider the text to be your specification.
+- The `git-lfs-test` framework is written in Go and uses SQLite for data
+  collection and reporting. Continue to use Bash for trivial scripts,
+  but use Go whenever practicable.
+  The Go project has several executables (lfst-scenario, lfst-checksum, lfst-import,
+  lfst-run, lfst-query, lfst-config).
+- The code has comprehensive unit tests. The text in the web pages provides
+  the specification for the test scenarios and evaluation process.
 
 However, the specification is imperfect.
 For example, some scenarios are unlikely to work as described.

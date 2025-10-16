@@ -11,13 +11,13 @@ All commands work from anywhere with SSH access.
 We cannot do this yet because no release has been published to date:
 
 ```shell
-go install github.com/mslinn/git_lfs_scripts/cmd/...@latest
+go install github.com/mslinn/git-lfs-test/cmd/...@latest
 ```
 
 Do this instead for now:
 
 ```shell
-$ cd /work/git/git_lfs_scripts
+$ cd /work/git/git-lfs-test
 $ make install
 ```
 
@@ -38,7 +38,7 @@ The database is created automatically at first use at
 Same installation as server:
 
 ```shell
-$ cd /mnt/f/work/git/git_lfs_scripts  # or appropriate path
+$ cd /mnt/f/work/git/git-lfs-test  # or appropriate path
 $ make install
 ```
 
