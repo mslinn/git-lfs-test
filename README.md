@@ -58,24 +58,34 @@ This installs all commands to `/usr/local/bin/`:
 
 1. **Configure the test environment:**
 
+First, set the `work` environment variable (required for the recommended test data location):
+
+```shell
+$ export work=/mnt/f/work  # or your preferred base directory
+```
+
+Then configure the framework:
+
 ```shell
 $ lfst-config init
 Created config file: /home/mslinn/.lfs-test-config
 
 $ lfst-config set database /path/to/your/test.db
 $ lfst-config set remote_host your-server
-$ lfst-config set test_data /mnt/f/work/git/git_lfs_test_data
+$ lfst-config set test_data $work/git/git_lfs_test_data
 $ lfst-config show
 ```
+
+**Important:** If you use `$work/git/git_lfs_test_data` as your test data path, the `work` environment variable must be set, or commands will fail with an error.
 
 2. **Set up test data:**
 
 You need 2.4GB of test files. The test data location can be configured:
-- In the config file: `lfst-config set test_data /path/to/test/data`
-- Via environment variable: `export LFS_TEST_DATA=/path/to/test/data`
-- For remote access via SSH: `export LFS_TEST_DATA=server:/path/to/data`
+- In the config file: `lfst-config set test_data $work/git/git_lfs_test_data` (recommended)
+- Via environment variable: `export LFS_TEST_DATA=$work/git/git_lfs_test_data`
+- For remote access via SSH: `export LFS_TEST_DATA=server:$work/git/git_lfs_test_data`
 
-Default location: `/mnt/f/work/git/git_lfs_test_data`
+Recommended location: `$work/git/git_lfs_test_data` (requires `work` env var to be set)
 
 3. **List available scenarios:**
 
@@ -144,14 +154,17 @@ The framework uses `~/.lfs-test-config` (YAML format):
 database: /home/mslinn/lfs_eval/lfs-test.db
 remote_host: gojira
 auto_remote: true
-test_data: /mnt/f/work/git/git_lfs_test_data
+test_data: $work/git/git_lfs_test_data
 ```
+
+**Note:** The `test_data` path can use shell variable expansion. If using `$work/git/git_lfs_test_data`, you must set `export work=/your/base/path` in your shell environment, or commands will fail.
 
 ### Environment Variables
 
 Environment variables override config file settings:
 
-- `LFS_TEST_DATA` - Location of test data directory (overrides `test_data` in config file)
+- `work` - Base directory for test data (required if using `$work/git/git_lfs_test_data` pattern)
+- `LFS_TEST_DATA` - Location of test data directory (overrides `test_data` in config file; recommended: `$work/git/git_lfs_test_data`)
 - `LFS_TEST_DB` - Database path (overrides `database` in config file)
 - `LFS_TEST_CONFIG` - Path to config file (default: `~/.lfs-test-config`)
 - `LFS_REMOTE_HOST` - Remote host for SSH operations (overrides `remote_host` in config file)

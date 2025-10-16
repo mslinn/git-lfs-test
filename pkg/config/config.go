@@ -144,13 +144,21 @@ func (cfg *Config) GetDatabasePath() string {
 	return cfg.DatabasePath
 }
 
-// GetTestDataPath returns the test data path, expanding ~/ if needed
+// GetTestDataPath returns the test data path, expanding ~/ and environment variables
+// Supports patterns like ~/path, $work/path, and ${work}/path
 func (cfg *Config) GetTestDataPath() string {
-	if len(cfg.TestDataPath) > 0 && cfg.TestDataPath[0] == '~' {
+	path := cfg.TestDataPath
+
+	// Expand tilde
+	if len(path) > 0 && path[0] == '~' {
 		homeDir, err := os.UserHomeDir()
 		if err == nil {
-			return filepath.Join(homeDir, cfg.TestDataPath[2:])
+			path = filepath.Join(homeDir, path[2:])
 		}
 	}
-	return cfg.TestDataPath
+
+	// Expand environment variables ($VAR and ${VAR})
+	path = os.ExpandEnv(path)
+
+	return path
 }
