@@ -116,8 +116,7 @@ total 1.3G
 -rw-r--r-- 1 mslinn mslinn 154M Jan 23  2025 zip2.zip
 ```
 
-If not present, the test data can be downloaded using the `git_lfs_test_data` script
-(documented at https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data).
+If not present, the test data can be downloaded using the [`git_lfs_test_data` script](https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data).
 
 
 ## Running a Test Scenario
@@ -251,21 +250,21 @@ Stored 6 checksums for step 7
 ### What Each Step Does
 
 1. **Setup**:
-   - Create local git repository
-   - Configure git user (LFS Test <test@example.com>)
-   - Create GitHub repository (for scenarios with github git server) using `gh` CLI
-   - Add GitHub remote as 'origin'
-   - Install git-lfs hooks
+   - Create local Git repository
+   - Configure Git user (LFS Test `<test@example.com>`)
+   - Create GitHub repository (for scenarios with GitHub Git server) using `gh` CLI
+   - Add GitHub remote as `origin`
+   - Install `git-lfs` hooks
    - Create `.lfsconfig` with LFS server URL (if applicable)
-   - Configure LFS tracking patterns, e.g. \*.pdf, \*.mov, \*.avi, \*.ogg, \*.m4v, \*.zip
-   - Generate evaluation README.md with scenario details
-   - Copy 1.3GB test files from v1/
+   - Configure LFS tracking patterns, e.g. `\*.pdf`, `\*.mov`, `\*.avi`, `\*.ogg`, `\*.m4v`, `\*.zip`
+   - Generate evaluation `README.md` with scenario details
+   - Copy 1.3GB test files from `v1/`
    - Compute and store checksums
-2. **Initial Push**: Add all files to git, commit with message "Initial commit with LFS files", verify checksums match step 1
+2. **Initial Push**: Add all files to Git, commit with message "Initial commit with LFS files", verify checksums match step 1
 3. **Modifications**:
-   - Update 4 files with v2 versions (pdf1.pdf, video2.mov, video3.avi, zip1.zip)
-   - Delete 2 files (video1.m4v, video4.ogg)
-   - Rename 1 file (zip2.zip → zip2_renamed.zip)
+   - Update 4 files with v2 versions (`pdf1.pdf`, `video2.mov`, `video3.avi`, `zip1.zip`)
+   - Delete 2 files (`video1.m4v`, `video4.ogg`)
+   - Rename 1 file (`zip2.zip` → `zip2_renamed.zip`)
    - Add all changes, commit with message "Update, delete, and rename files (v2)", compute checksums
 4. **Second Clone**: Clone repository to repo2 directory, compute checksums, compare with step 3 (must match)
 5. **Second Client Push**: Create README.md in second clone, add and commit with message "Add README from second client", compute checksums
