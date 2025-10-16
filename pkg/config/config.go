@@ -13,6 +13,7 @@ type Config struct {
 	DatabasePath string `yaml:"database"`
 	RemoteHost   string `yaml:"remote_host"`
 	AutoRemote   bool   `yaml:"auto_remote"`
+	TestDataPath string `yaml:"test_data"`
 }
 
 // DefaultConfig returns the default configuration
@@ -26,6 +27,7 @@ func DefaultConfig() *Config {
 		DatabasePath: dbPath,
 		RemoteHost:   "gojira",
 		AutoRemote:   true,
+		TestDataPath: "/mnt/f/work/git/git_lfs_test_data",
 	}
 }
 
@@ -61,6 +63,9 @@ func Load() (*Config, error) {
 	}
 	if autoRemote := os.Getenv("LFS_AUTO_REMOTE"); autoRemote != "" {
 		cfg.AutoRemote = autoRemote == "true" || autoRemote == "1"
+	}
+	if testData := os.Getenv("LFS_TEST_DATA"); testData != "" {
+		cfg.TestDataPath = testData
 	}
 
 	return cfg, nil
@@ -137,4 +142,15 @@ func (cfg *Config) GetDatabasePath() string {
 		}
 	}
 	return cfg.DatabasePath
+}
+
+// GetTestDataPath returns the test data path, expanding ~/ if needed
+func (cfg *Config) GetTestDataPath() string {
+	if len(cfg.TestDataPath) > 0 && cfg.TestDataPath[0] == '~' {
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			return filepath.Join(homeDir, cfg.TestDataPath[2:])
+		}
+	}
+	return cfg.TestDataPath
 }
