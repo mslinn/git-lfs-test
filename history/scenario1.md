@@ -47,9 +47,9 @@ Configure `~/.lfs-test-config`:
 
 ```shell
 $ cat > ~/.lfs-test-config <<EOF
+auto_remote: true
 database: /home/mslinn/lfs_eval/lfs-test.db
 remote_host: gojira
-auto_remote: true
 test_data: $work/git/git_lfs_test_data
 EOF
 ```
@@ -397,12 +397,14 @@ $ lfst-scenario -f 7
 ```
 
 The command will:
+
 1. Create private GitHub repository (e.g., `mslinn/lfs-eval-test`)
 2. Add it as 'origin' remote
 3. Configure `.lfsconfig` with LFS server URL
 4. Execute all 7 test steps
 
-**Note:** The `-f` flag deletes and recreates the GitHub repository. Use with caution on production repositories.
+**Note:** The `-f` flag deletes and recreates the GitHub repository.
+Use with caution on production repositories.
 
 
 ## Troubleshooting
@@ -484,6 +486,7 @@ lfst-scenario --db /path/to/my-test.db 6
 ## Next Steps
 
 **Completed:**
+
 - ✓ All 7 steps implemented in scenario runner
 - ✓ File modifications, deletions, and renames (Step 3)
 - ✓ Clone to second directory (Step 4)
@@ -500,6 +503,7 @@ lfst-scenario --db /path/to/my-test.db 6
   - ✓ Remote setup automation for GitHub scenarios
 
 **Remaining:**
+
 1. Add remote repository setup automation:
    - Auto-create bare repos for local scenarios
    - Configure remote URLs in git

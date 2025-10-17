@@ -162,6 +162,55 @@ func CheckRemoteDir(host, path string) error {
 	return nil
 }
 
+// validateEnvVars checks if all environment variables in a path are defined
+// Returns error if any undefined variables are found
+func validateEnvVars(path string) error {
+	// Parse the path to find all $VAR and ${VAR} references
+	i := 0
+	for i < len(path) {
+		if path[i] != '$' {
+			i++
+			continue
+		}
+
+		// Found a $ - extract the variable name
+		i++ // skip $
+		if i >= len(path) {
+			break
+		}
+
+		var varName string
+		if path[i] == '{' {
+			// ${VAR} format
+			i++ // skip {
+			start := i
+			for i < len(path) && path[i] != '}' {
+				i++
+			}
+			varName = path[start:i]
+			if i < len(path) {
+				i++ // skip }
+			}
+		} else {
+			// $VAR format
+			start := i
+			for i < len(path) && (path[i] == '_' || (path[i] >= 'a' && path[i] <= 'z') ||
+				(path[i] >= 'A' && path[i] <= 'Z') || (path[i] >= '0' && path[i] <= '9')) {
+				i++
+			}
+			varName = path[start:i]
+		}
+
+		// Check if variable is defined
+		if varName != "" {
+			if _, exists := os.LookupEnv(varName); !exists {
+				return fmt.Errorf("undefined environment variable: %s", varName)
+			}
+		}
+	}
+	return nil
+}
+
 // GetTestDataPath returns the path to the test data directory
 // Searches in multiple locations with priority:
 // 1. LFS_TEST_DATA environment variable
@@ -173,25 +222,25 @@ func GetTestDataPath() (string, error) {
 
 	// 1. Check LFS_TEST_DATA environment variable (highest priority)
 	if envPath := os.Getenv("LFS_TEST_DATA"); envPath != "" {
-		expanded := os.ExpandEnv(envPath)
-		// Check if expansion failed (variable undefined)
-		if strings.Contains(expanded, "$") {
-			return "", fmt.Errorf("LFS_TEST_DATA contains undefined environment variable: %s\n"+
-				"Please set the required environment variable (e.g., export work=/your/base/path)", envPath)
+		// Validate all environment variables are defined
+		if err := validateEnvVars(envPath); err != nil {
+			return "", fmt.Errorf("LFS_TEST_DATA contains %v\n"+
+				"Please set the required environment variable (e.g., export work=/your/base/path)", err)
 		}
+		expanded := os.ExpandEnv(envPath)
 		candidates = append(candidates, expanded)
 	}
 
 	// 2. Check config file
 	cfg, err := config.Load()
 	if err == nil && cfg.TestDataPath != "" {
-		configPath := cfg.GetTestDataPath()
-		// Check if expansion failed (variable undefined)
-		if strings.Contains(configPath, "$") {
-			return "", fmt.Errorf("test_data in config file contains undefined environment variable: %s\n"+
+		// Validate all environment variables are defined
+		if err := validateEnvVars(cfg.TestDataPath); err != nil {
+			return "", fmt.Errorf("test_data in config file contains %v\n"+
 				"Please set the required environment variable (e.g., export work=/your/base/path)\n"+
-				"See: https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data", cfg.TestDataPath)
+				"See: https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data", err)
 		}
+		configPath := cfg.GetTestDataPath()
 		candidates = append(candidates, configPath)
 	}
 

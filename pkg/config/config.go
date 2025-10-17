@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"gopkg.in/yaml.v3"
@@ -161,4 +162,107 @@ func (cfg *Config) GetTestDataPath() string {
 	path = os.ExpandEnv(path)
 
 	return path
+}
+
+// ValidateRemoteHost checks if the remote host is accessible via SSH
+// Returns nil if accessible or auto_remote is disabled
+// Returns error with specific failure mode if inaccessible
+func (cfg *Config) ValidateRemoteHost() error {
+	// Skip validation if auto_remote is disabled
+	if !cfg.AutoRemote {
+		return nil
+	}
+
+	// Skip validation if remote host is empty
+	if cfg.RemoteHost == "" {
+		return fmt.Errorf("remote_host is empty but auto_remote is enabled")
+	}
+
+	// Skip validation if we're running on the remote host
+	if !cfg.IsRemoteHost() {
+		return nil // We're on the remote host, no need to check SSH
+	}
+
+	// Try to connect via SSH with a short timeout
+	// Use BatchMode to avoid prompting for password
+	// Use ConnectTimeout to fail quickly
+	cmd := exec.Command("ssh",
+		"-o", "ConnectTimeout=5",
+		"-o", "BatchMode=yes",
+		"-o", "StrictHostKeyChecking=no",
+		cfg.RemoteHost,
+		"echo", "ok")
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		// Determine the specific failure mode
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode := exitErr.ExitCode()
+			if exitCode == 255 {
+				// SSH connection failure (common exit code)
+				return fmt.Errorf("cannot connect to remote_host '%s' via SSH: connection failed\n"+
+					"Please verify:\n"+
+					"  - Host is reachable on the network\n"+
+					"  - SSH is running on the remote host\n"+
+					"  - Firewall allows SSH connections\n"+
+					"  - DNS resolves the hostname\n"+
+					"Error: %v", cfg.RemoteHost, err)
+			}
+		}
+		return fmt.Errorf("SSH connection to remote_host '%s' failed: %v\nOutput: %s",
+			cfg.RemoteHost, err, string(output))
+	}
+
+	return nil
+}
+
+// ValidateDatabase checks if the database path is accessible
+// Creates the directory if it doesn't exist
+// Returns error if the path is invalid or inaccessible
+func (cfg *Config) ValidateDatabase() error {
+	dbPath := cfg.GetDatabasePath()
+
+	if dbPath == "" {
+		return fmt.Errorf("database path is empty")
+	}
+
+	// Get the directory containing the database
+	dbDir := filepath.Dir(dbPath)
+
+	// Try to create the directory if it doesn't exist
+	if err := os.MkdirAll(dbDir, 0755); err != nil {
+		return fmt.Errorf("cannot create database directory '%s': %w", dbDir, err)
+	}
+
+	// Check if directory is writable by trying to create a temp file
+	tempFile := filepath.Join(dbDir, ".write_test")
+	if err := os.WriteFile(tempFile, []byte("test"), 0644); err != nil {
+		return fmt.Errorf("database directory '%s' is not writable: %w", dbDir, err)
+	}
+	os.Remove(tempFile)
+
+	return nil
+}
+
+// Validate performs comprehensive validation of all configuration parameters
+// Returns error with details about any validation failures
+func (cfg *Config) Validate() error {
+	var errors []string
+
+	// Validate database
+	if err := cfg.ValidateDatabase(); err != nil {
+		errors = append(errors, fmt.Sprintf("Database: %v", err))
+	}
+
+	// Validate remote host
+	if err := cfg.ValidateRemoteHost(); err != nil {
+		errors = append(errors, fmt.Sprintf("Remote host: %v", err))
+	}
+
+	if len(errors) > 0 {
+		return fmt.Errorf("configuration validation failed:\n  %s",
+			filepath.Join(errors...))
+	}
+
+	return nil
 }

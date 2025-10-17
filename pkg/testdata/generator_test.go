@@ -607,3 +607,97 @@ func containsSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestGetTestDataPath_UndefinedEnvVarError(t *testing.T) {
+	// Save original environment
+	origEnv := os.Getenv("LFS_TEST_DATA")
+	origWork := os.Getenv("work")
+	origConfig := os.Getenv("LFS_TEST_CONFIG")
+	defer func() {
+		os.Setenv("LFS_TEST_DATA", origEnv)
+		os.Setenv("work", origWork)
+		os.Setenv("LFS_TEST_CONFIG", origConfig)
+	}()
+
+	// Ensure work variable is not defined
+	os.Unsetenv("work")
+
+	// Set LFS_TEST_DATA to use undefined $work variable
+	os.Setenv("LFS_TEST_DATA", "$work/git/git_lfs_test_data")
+
+	// Point to non-existent config to avoid interference
+	os.Setenv("LFS_TEST_CONFIG", "/nonexistent/config")
+
+	// GetTestDataPath should return an error about undefined variable
+	_, err := GetTestDataPath()
+	if err == nil {
+		t.Fatal("GetTestDataPath() should return error for undefined environment variable")
+	}
+
+	// Error message should mention the undefined variable
+	errMsg := err.Error()
+	if !contains(errMsg, "undefined environment variable") {
+		t.Errorf("Error message should mention 'undefined environment variable', got: %v", errMsg)
+	}
+	if !contains(errMsg, "work") {
+		t.Errorf("Error message should mention the variable name 'work', got: %v", errMsg)
+	}
+}
+
+func TestGetTestDataPath_ConfigFileWithEnvVar(t *testing.T) {
+	// Save original environment
+	origWork := os.Getenv("work")
+	origConfig := os.Getenv("LFS_TEST_CONFIG")
+	origTestData := os.Getenv("LFS_TEST_DATA")
+	defer func() {
+		os.Setenv("work", origWork)
+		os.Setenv("LFS_TEST_CONFIG", origConfig)
+		os.Setenv("LFS_TEST_DATA", origTestData)
+	}()
+
+	// Clear LFS_TEST_DATA so config file is used
+	os.Unsetenv("LFS_TEST_DATA")
+
+	// Create a temporary directory for config
+	tempDir, err := os.MkdirTemp("", "config_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create a temporary test data directory
+	testDataDir, err := os.MkdirTemp("", "testdata_test")
+	if err != nil {
+		t.Fatalf("Failed to create test data dir: %v", err)
+	}
+	defer os.RemoveAll(testDataDir)
+
+	// Set work variable to temp directory
+	os.Setenv("work", tempDir)
+
+	// Create config file with $work variable
+	configPath := filepath.Join(tempDir, "test-config.yaml")
+	configContent := "test_data: $work/git_lfs_test_data\n"
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to write config file: %v", err)
+	}
+
+	// Create the expected test data directory
+	expectedPath := filepath.Join(tempDir, "git_lfs_test_data")
+	if err := os.MkdirAll(expectedPath, 0755); err != nil {
+		t.Fatalf("Failed to create test data directory: %v", err)
+	}
+
+	// Set config path
+	os.Setenv("LFS_TEST_CONFIG", configPath)
+
+	// GetTestDataPath should expand $work and find the directory
+	path, err := GetTestDataPath()
+	if err != nil {
+		t.Fatalf("GetTestDataPath() failed: %v", err)
+	}
+
+	if path != expectedPath {
+		t.Errorf("GetTestDataPath() = %v, want %v", path, expectedPath)
+	}
+}
