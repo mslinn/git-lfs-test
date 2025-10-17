@@ -46,7 +46,14 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("failed to create schema: %w", err)
 	}
 
-	return &DB{conn: conn}, nil
+	// Run migrations for existing databases
+	db := &DB{conn: conn}
+	if err := db.runMigrations(); err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+
+	return db, nil
 }
 
 // Close closes the database connection
@@ -57,9 +64,9 @@ func (db *DB) Close() error {
 // CreateTestRun creates a new test run record
 func (db *DB) CreateTestRun(run *TestRun) error {
 	result, err := db.conn.Exec(`
-		INSERT INTO test_runs (scenario_id, server_type, protocol, git_server, started_at, status, notes)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		run.ScenarioID, run.ServerType, run.Protocol, run.GitServer,
+		INSERT INTO test_runs (scenario_id, server_type, protocol, git_server, pid, started_at, status, notes)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		run.ScenarioID, run.ServerType, run.Protocol, run.GitServer, run.PID,
 		run.StartedAt.Format(time.RFC3339), run.Status, run.Notes,
 	)
 	if err != nil {
@@ -85,9 +92,9 @@ func (db *DB) UpdateTestRun(run *TestRun) error {
 
 	_, err := db.conn.Exec(`
 		UPDATE test_runs
-		SET completed_at = ?, status = ?, notes = ?
+		SET pid = ?, completed_at = ?, status = ?, notes = ?
 		WHERE id = ?`,
-		completedAt, run.Status, run.Notes, run.ID,
+		run.PID, completedAt, run.Status, run.Notes, run.ID,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to update test run: %w", err)
@@ -103,10 +110,10 @@ func (db *DB) GetTestRun(id int64) (*TestRun, error) {
 	var completedAt *string
 
 	err := db.conn.QueryRow(`
-		SELECT id, scenario_id, server_type, protocol, git_server, started_at, completed_at, status, notes
+		SELECT id, scenario_id, server_type, protocol, git_server, pid, started_at, completed_at, status, notes
 		FROM test_runs WHERE id = ?`, id,
 	).Scan(
-		&run.ID, &run.ScenarioID, &run.ServerType, &run.Protocol, &run.GitServer,
+		&run.ID, &run.ScenarioID, &run.ServerType, &run.Protocol, &run.GitServer, &run.PID,
 		&startedAt, &completedAt, &run.Status, &run.Notes,
 	)
 	if err != nil {
@@ -128,11 +135,11 @@ func (db *DB) ListTestRuns(scenarioID ...int) ([]*TestRun, error) {
 	var args []interface{}
 
 	if len(scenarioID) > 0 && scenarioID[0] > 0 {
-		query = `SELECT id, scenario_id, server_type, protocol, git_server, started_at, completed_at, status, notes
+		query = `SELECT id, scenario_id, server_type, protocol, git_server, pid, started_at, completed_at, status, notes
 			FROM test_runs WHERE scenario_id = ? ORDER BY started_at DESC`
 		args = append(args, scenarioID[0])
 	} else {
-		query = `SELECT id, scenario_id, server_type, protocol, git_server, started_at, completed_at, status, notes
+		query = `SELECT id, scenario_id, server_type, protocol, git_server, pid, started_at, completed_at, status, notes
 			FROM test_runs ORDER BY started_at DESC`
 	}
 
@@ -149,7 +156,7 @@ func (db *DB) ListTestRuns(scenarioID ...int) ([]*TestRun, error) {
 		var completedAt *string
 
 		err := rows.Scan(
-			&run.ID, &run.ScenarioID, &run.ServerType, &run.Protocol, &run.GitServer,
+			&run.ID, &run.ScenarioID, &run.ServerType, &run.Protocol, &run.GitServer, &run.PID,
 			&startedAt, &completedAt, &run.Status, &run.Notes,
 		)
 		if err != nil {
@@ -342,4 +349,34 @@ func (db *DB) QueryRaw(query string, args ...interface{}) (*sql.Rows, error) {
 // QueryRowRaw executes a raw SQL query and returns a single row
 func (db *DB) QueryRowRaw(query string, args ...interface{}) *sql.Row {
 	return db.conn.QueryRow(query, args...)
+}
+
+// runMigrations applies database schema migrations for existing databases
+func (db *DB) runMigrations() error {
+	// Check if pid column exists in test_runs table
+	var pidExists bool
+	err := db.conn.QueryRow(`
+		SELECT COUNT(*) > 0
+		FROM pragma_table_info('test_runs')
+		WHERE name = 'pid'
+	`).Scan(&pidExists)
+
+	if err != nil {
+		return fmt.Errorf("failed to check for pid column: %w", err)
+	}
+
+	// Add pid column if it doesn't exist
+	if !pidExists {
+		_, err := db.conn.Exec(`ALTER TABLE test_runs ADD COLUMN pid INTEGER DEFAULT 0`)
+		if err != nil {
+			return fmt.Errorf("failed to add pid column: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// GetAllTestRuns retrieves all test runs (for cancellation purposes)
+func (db *DB) GetAllTestRuns() ([]*TestRun, error) {
+	return db.ListTestRuns()
 }

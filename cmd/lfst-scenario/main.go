@@ -3,7 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/mslinn/git-lfs-test/pkg/config"
 	"github.com/mslinn/git-lfs-test/pkg/database"
@@ -35,6 +38,7 @@ func main() {
 		dbPath      string
 		workDir     string
 		listOnly    bool
+		cancelArg   string
 	)
 
 	pflag.BoolVarP(&showVersion, "version", "V", false, "Show version and exit")
@@ -45,6 +49,7 @@ func main() {
 	pflag.StringVar(&dbPath, "db", "", "Path to SQLite database (default from config)")
 	pflag.StringVar(&workDir, "work-dir", "/tmp/lfst", "Working directory for test execution")
 	pflag.BoolVar(&listOnly, "list", false, "List available scenarios and exit")
+	pflag.StringVar(&cancelArg, "cancel", "", "Cancel a running test: run ID or 'all'")
 
 	pflag.Parse()
 
@@ -63,6 +68,12 @@ func main() {
 	// Handle list
 	if listOnly {
 		listScenarios()
+		os.Exit(0)
+	}
+
+	// Handle cancel
+	if cancelArg != "" {
+		handleCancel(cancelArg, dbPath, workDir)
 		os.Exit(0)
 	}
 
@@ -123,6 +134,137 @@ func main() {
 	fmt.Printf("\n✓ Scenario %d completed successfully\n", scenarioID)
 	fmt.Printf("  Run ID: %d\n", runner.RunID)
 	fmt.Printf("  View results: lfst-run show %d\n", runner.RunID)
+}
+
+func handleCancel(cancelArg, dbPath, workDir string) {
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Use config database if not overridden
+	if dbPath == "" {
+		dbPath = cfg.GetDatabasePath()
+	}
+
+	// Open database
+	db, err := database.Open(dbPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error opening database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	// Get runs to cancel
+	var runsToCanccel []*database.TestRun
+
+	if cancelArg == "all" {
+		// Get all running tests
+		allRuns, err := db.GetAllTestRuns()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error getting test runs: %v\n", err)
+			os.Exit(1)
+		}
+
+		for _, run := range allRuns {
+			if run.Status == "running" {
+				runsToCanccel = append(runsToCanccel, run)
+			}
+		}
+
+		if len(runsToCanccel) == 0 {
+			fmt.Println("No running tests to cancel")
+			return
+		}
+	} else {
+		// Parse run ID
+		runID, err := strconv.ParseInt(cancelArg, 10, 64)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: invalid run ID '%s'\n", cancelArg)
+			os.Exit(1)
+		}
+
+		// Get specific run
+		run, err := db.GetTestRun(runID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: run %d not found\n", runID)
+			os.Exit(1)
+		}
+
+		if run.Status != "running" {
+			fmt.Printf("Run %d is not running (status: %s)\n", runID, run.Status)
+			return
+		}
+
+		runsToCanccel = append(runsToCanccel, run)
+	}
+
+	// Cancel each run
+	for _, run := range runsToCanccel {
+		fmt.Printf("Cancelling run %d (PID %d)...\n", run.ID, run.PID)
+
+		// Try to terminate the process
+		if run.PID > 0 {
+			process, err := os.FindProcess(run.PID)
+			if err == nil {
+				// Send SIGTERM for graceful shutdown
+				err = process.Signal(syscall.SIGTERM)
+				if err == nil {
+					fmt.Printf("  Sent SIGTERM to process %d\n", run.PID)
+
+					// Wait a bit for graceful shutdown
+					time.Sleep(2 * time.Second)
+
+					// Check if process is still running
+					err = process.Signal(syscall.Signal(0))
+					if err == nil {
+						// Process still running, send SIGKILL
+						process.Kill()
+						fmt.Printf("  Sent SIGKILL to process %d\n", run.PID)
+					}
+				} else {
+					fmt.Printf("  Process %d not found (may have already exited)\n", run.PID)
+				}
+			}
+		}
+
+		// Clean up working directories
+		repo1Dir := filepath.Join(workDir, "repo1")
+		repo2Dir := filepath.Join(workDir, "repo2")
+
+		if _, err := os.Stat(repo1Dir); err == nil {
+			if err := os.RemoveAll(repo1Dir); err != nil {
+				fmt.Printf("  Warning: failed to remove %s: %v\n", repo1Dir, err)
+			} else {
+				fmt.Printf("  Removed %s\n", repo1Dir)
+			}
+		}
+
+		if _, err := os.Stat(repo2Dir); err == nil {
+			if err := os.RemoveAll(repo2Dir); err != nil {
+				fmt.Printf("  Warning: failed to remove %s: %v\n", repo2Dir, err)
+			} else {
+				fmt.Printf("  Removed %s\n", repo2Dir)
+			}
+		}
+
+		// Mark run as cancelled in database
+		run.Status = "cancelled"
+		run.PID = 0
+		completedNow := time.Now()
+		run.CompletedAt = &completedNow
+		run.Notes += " | Cancelled by user"
+
+		if err := db.UpdateTestRun(run); err != nil {
+			fmt.Printf("  Warning: failed to update run status: %v\n", err)
+		} else {
+			fmt.Printf("  ✓ Run %d marked as cancelled\n", run.ID)
+		}
+	}
+
+	fmt.Printf("\nCancelled %d test run(s)\n", len(runsToCanccel))
 }
 
 func listScenarios() {

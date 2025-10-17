@@ -212,6 +212,33 @@ $ go test ./...
 $ go test -cover ./...
 ```
 
+### Cancel tests
+
+Cancel a specific test:
+
+```shell
+$ lfst scenario --cancel 1
+```
+
+Or cancel all running tests:
+
+```shell
+$ lfst scenario --cancel all
+```
+
+The lfst framework supports canceling tests:
+
+  1. Tracks PIDs: Each test run now stores the process ID (`pid`) when it starts
+  2. Database Migration: Automatically adds the `pid` column to existing databases
+  3. Controlled Termination:
+    - Sends `SIGTERM` first (graceful shutdown)
+    - Waits 2 seconds
+    - If process still running, sends `SIGKILL` (forceful)
+  4. Cleanup: Removes working directories (`/tmp/lfst/repo1` and `/tmp/lfst/repo2`)
+  5. Status Update: Marks run as `cancelled` in database with timestamp
+
+Stale runs with processes that no longer exist are cancelled in the same way.
+
 
 ## Architecture
 

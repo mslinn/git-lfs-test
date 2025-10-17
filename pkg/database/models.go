@@ -9,9 +9,10 @@ type TestRun struct {
 	ServerType  string // 'lfs-test-server', 'giftless', 'rudolfs', 'bare'
 	Protocol    string // 'http', 'https', 'ssh', 'local'
 	GitServer   string // 'bare', 'github'
+	PID         int    // Process ID of the running test
 	StartedAt   time.Time
 	CompletedAt *time.Time
-	Status      string // 'running', 'completed', 'failed'
+	Status      string // 'running', 'completed', 'failed', 'cancelled'
 	Notes       string
 }
 

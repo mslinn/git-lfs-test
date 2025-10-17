@@ -477,12 +477,15 @@ func (ctx *Context) LFSMigrate(repoDir string) error {
 		}
 	}
 
-	if result.Error != nil {
-		return fmt.Errorf("git lfs migrate failed: %w", result.Error)
-	}
-
-	if result.ExitCode != 0 {
-		return fmt.Errorf("git lfs migrate failed (exit %d): %s", result.ExitCode, result.Stderr)
+	if result.Error != nil || result.ExitCode != 0 {
+		stderr := result.Stderr
+		if stderr == "" {
+			stderr = "(no error output)"
+		}
+		if result.Error != nil {
+			return fmt.Errorf("git lfs migrate export failed: %w\nStderr: %s", result.Error, stderr)
+		}
+		return fmt.Errorf("git lfs migrate export failed (exit %d): %s", result.ExitCode, stderr)
 	}
 
 	if ctx.Debug {

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS test_runs (
     server_type TEXT NOT NULL,
     protocol TEXT NOT NULL,
     git_server TEXT NOT NULL,
+    pid INTEGER DEFAULT 0,
     started_at TEXT NOT NULL,
     completed_at TEXT,
     status TEXT NOT NULL,

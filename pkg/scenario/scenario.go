@@ -8,6 +8,7 @@ import (
 	"github.com/mslinn/git-lfs-test/pkg/checksum"
 	"github.com/mslinn/git-lfs-test/pkg/database"
 	"github.com/mslinn/git-lfs-test/pkg/git"
+	"github.com/mslinn/git-lfs-test/pkg/lfsverify"
 	"github.com/mslinn/git-lfs-test/pkg/testdata"
 	"github.com/mslinn/git-lfs-test/pkg/timing"
 )
@@ -68,6 +69,7 @@ func (r *Runner) Execute() error {
 		ServerType: r.Scenario.ServerType,
 		Protocol:   r.Scenario.Protocol,
 		GitServer:  r.Scenario.GitServer,
+		PID:        os.Getpid(),
 		Status:     "running",
 		Notes:      fmt.Sprintf("Automated execution of scenario %d", r.Scenario.ID),
 	}
@@ -292,6 +294,42 @@ func (r *Runner) Step2_InitialPush() error {
 		fmt.Printf("Stored %d checksums for step 2\n", len(checksums))
 	}
 
+	// Verify LFS is working correctly
+	if r.Debug {
+		fmt.Println("Verifying LFS storage...")
+	}
+
+	// Get list of expected LFS files
+	files, err := testdata.RealTestFiles()
+	if err != nil {
+		return fmt.Errorf("failed to get test files: %w", err)
+	}
+
+	// Extract just the filenames
+	var expectedFiles []string
+	for _, f := range files {
+		expectedFiles = append(expectedFiles, f.Name)
+	}
+
+	// Verify files are stored as LFS pointers
+	if err := lfsverify.VerifyLFSPointers(r.RepoDir, expectedFiles, r.Debug); err != nil {
+		return fmt.Errorf("LFS pointer verification failed: %w", err)
+	}
+
+	// Verify LFS objects exist
+	if err := lfsverify.VerifyLFSObjects(r.RepoDir, len(expectedFiles), r.Debug); err != nil {
+		return fmt.Errorf("LFS objects verification failed: %w", err)
+	}
+
+	// Verify repository sizes are correct (LFS objects > git objects)
+	if err := lfsverify.VerifyRepositorySizes(r.RepoDir, r.Debug); err != nil {
+		return fmt.Errorf("repository size verification failed: %w", err)
+	}
+
+	if r.Debug {
+		fmt.Println("✓ LFS verification passed")
+	}
+
 	return nil
 }
 
@@ -444,6 +482,46 @@ func (r *Runner) Step4_SecondClone() error {
 		fmt.Printf("✓ Checksums match (%d files)\n", len(checksums))
 	}
 
+	// Verify LFS is working in the cloned repository
+	if r.Debug {
+		fmt.Println("Verifying LFS in cloned repository...")
+	}
+
+	// Get list of files that should exist after step 3 modifications
+	// After step 3, we have: pdf1, video2, video3, zip1, zip2_renamed (5 files)
+	// deleted: video1.m4v, video4.ogg
+	v2Files, err := testdata.RealTestFilesV2()
+	if err != nil {
+		return fmt.Errorf("failed to get v2 files: %w", err)
+	}
+
+	var expectedFiles []string
+	for _, f := range v2Files {
+		expectedFiles = append(expectedFiles, f.Name)
+	}
+	// Add the renamed file
+	expectedFiles = append(expectedFiles, "zip2_renamed.zip")
+
+	// Verify files are stored as LFS pointers in cloned repo
+	if err := lfsverify.VerifyLFSPointers(r.Repo2Dir, expectedFiles, r.Debug); err != nil {
+		return fmt.Errorf("LFS pointer verification failed in clone: %w", err)
+	}
+
+	// Verify LFS objects exist in cloned repo
+	// Should have at least the files from step 3 (some may be duplicates from v1/v2)
+	if err := lfsverify.VerifyLFSObjects(r.Repo2Dir, len(expectedFiles), r.Debug); err != nil {
+		return fmt.Errorf("LFS objects verification failed in clone: %w", err)
+	}
+
+	// Verify repository sizes
+	if err := lfsverify.VerifyRepositorySizes(r.Repo2Dir, r.Debug); err != nil {
+		return fmt.Errorf("repository size verification failed in clone: %w", err)
+	}
+
+	if r.Debug {
+		fmt.Println("✓ LFS verification passed in clone")
+	}
+
 	return nil
 }
 
@@ -585,14 +663,6 @@ func (r *Runner) Step7_Untrack() error {
 		}
 	}
 
-	// Use git lfs migrate to convert files back to regular git
-	if r.Debug {
-		fmt.Println("Migrating files out of LFS...")
-	}
-	if err := ctx.LFSMigrate(r.RepoDir); err != nil {
-		return err
-	}
-
 	// Add .gitattributes changes
 	if r.Debug {
 		fmt.Println("Adding .gitattributes changes...")
@@ -601,12 +671,48 @@ func (r *Runner) Step7_Untrack() error {
 		return err
 	}
 
-	// Commit the untrack changes
+	// Commit the untrack changes (required before migrate export)
 	if r.Debug {
 		fmt.Println("Committing LFS untrack...")
 	}
 	if err := ctx.Commit(r.RepoDir, "Untrack files from LFS"); err != nil {
 		return err
+	}
+
+	// Use git lfs migrate to convert files back to regular git
+	// This requires a clean working directory (no uncommitted changes)
+	if r.Debug {
+		fmt.Println("Migrating files out of LFS...")
+	}
+	if err := ctx.LFSMigrate(r.RepoDir); err != nil {
+		return err
+	}
+
+	// Verify files are NO LONGER stored as LFS pointers
+	if r.Debug {
+		fmt.Println("Verifying files are no longer in LFS...")
+	}
+
+	// Get list of files that should still exist (not deleted)
+	v2Files, err := testdata.RealTestFilesV2()
+	if err != nil {
+		return fmt.Errorf("failed to get v2 files: %w", err)
+	}
+
+	var expectedFiles []string
+	for _, f := range v2Files {
+		expectedFiles = append(expectedFiles, f.Name)
+	}
+	// Add the renamed file
+	expectedFiles = append(expectedFiles, "zip2_renamed.zip")
+
+	// Verify files are NOT LFS pointers anymore
+	if err := lfsverify.VerifyNotLFSPointers(r.RepoDir, expectedFiles, r.Debug); err != nil {
+		return fmt.Errorf("LFS migration verification failed: %w", err)
+	}
+
+	if r.Debug {
+		fmt.Println("✓ Files successfully migrated out of LFS")
 	}
 
 	// Compute final checksums
