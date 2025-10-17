@@ -99,6 +99,12 @@ func main() {
 		dbPath = cfg.GetDatabasePath()
 	}
 
+	// Validate database (creates directory if needed)
+	if err := cfg.ValidateDatabase(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error validating database: %v\n", err)
+		os.Exit(1)
+	}
+
 	// Open database
 	db, err := database.Open(dbPath)
 	if err != nil {

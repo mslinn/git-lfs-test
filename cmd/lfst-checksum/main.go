@@ -163,7 +163,13 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Local mode: open database directly
+	// Local mode: validate database (creates directory if needed)
+	if err := cfg.ValidateDatabase(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error validating database: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Open database directly
 	db, err := database.Open(dbPath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening database: %v\n", err)
