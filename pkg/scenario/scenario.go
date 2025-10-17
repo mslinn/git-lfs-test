@@ -214,11 +214,11 @@ func (r *Runner) Step1_Setup() error {
 	}
 	files, err := testdata.RealTestFiles()
 	if err != nil {
-		return fmt.Errorf("failed to get test files: %w", err)
+		return err
 	}
 
 	if err := testdata.CopyFiles(r.RepoDir, files, r.Debug); err != nil {
-		return fmt.Errorf("failed to copy test files: %w", err)
+		return err
 	}
 
 	// Compute checksums
@@ -736,7 +736,9 @@ func (r *Runner) validatePrerequisites() error {
 	}
 
 	// Check if test data is remote and rsync is available
-	if _, isRemote := testdata.ParseRemotePath(dataPath); isRemote {
+	isRemote := false
+	if _, remoteCheck := testdata.ParseRemotePath(dataPath); remoteCheck {
+		isRemote = true
 		result := timing.Run("rsync", []string{"--version"}, nil)
 		if result.Error != nil || result.ExitCode != 0 {
 			return fmt.Errorf("rsync is not installed or not in PATH\n\nRsync is required for remote test data.\nInstall with: apt-get install rsync")
@@ -746,8 +748,34 @@ func (r *Runner) validatePrerequisites() error {
 		}
 	}
 
+	// Validate that v1 test files actually exist
+	files, err := testdata.RealTestFiles()
+	if err != nil {
+		return fmt.Errorf("failed to get test file list: %w", err)
+	}
+
+	if len(files) == 0 {
+		return fmt.Errorf("no test files configured")
+	}
+
+	// Check if at least the first test file exists to confirm data is present
+	firstFile := files[0]
+	if isRemote {
+		// For remote, check via SSH
+		remotePath, _ := testdata.ParseRemotePath(firstFile.SourcePath)
+		result := timing.Run("ssh", []string{remotePath.Host, "test", "-f", remotePath.Path}, nil)
+		if result.Error != nil || result.ExitCode != 0 {
+			return fmt.Errorf("test data directory found at %s but files are missing\n\nExpected file not found: %s\nPlease ensure test data files are present in v1/ subdirectory.\nSee: https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data", dataPath, firstFile.SourcePath)
+		}
+	} else {
+		// For local, check file exists
+		if _, err := os.Stat(firstFile.SourcePath); os.IsNotExist(err) {
+			return fmt.Errorf("test data directory found at %s but files are missing\n\nExpected file not found: %s\nPlease ensure test data files are present in v1/ subdirectory.\nSee: https://www.mslinn.com/git/5600-git-lfs-evaluation.html#git_lfs_test_data", dataPath, firstFile.SourcePath)
+		}
+	}
+
 	if r.Debug {
-		fmt.Printf("  ✓ Test data found at: %s\n", dataPath)
+		fmt.Printf("  ✓ Test data found at: %s (%d files)\n", dataPath, len(files))
 	}
 
 	return nil

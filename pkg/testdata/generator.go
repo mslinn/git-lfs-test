@@ -42,20 +42,20 @@ func CopyFile(srcPath, destPath string, debug bool) error {
 	// Open source file
 	src, err := os.Open(srcPath)
 	if err != nil {
-		return fmt.Errorf("failed to open source: %w", err)
+		return err
 	}
 	defer src.Close()
 
 	// Create destination file
 	dst, err := os.Create(destPath)
 	if err != nil {
-		return fmt.Errorf("failed to create destination: %w", err)
+		return err
 	}
 	defer dst.Close()
 
 	// Copy content
 	if _, err := io.Copy(dst, src); err != nil {
-		return fmt.Errorf("failed to copy file: %w", err)
+		return err
 	}
 
 	return nil
@@ -89,11 +89,7 @@ func CopyRemoteFile(host, remotePath, destPath string, debug bool) error {
 		cmd.Stderr = os.Stderr
 	}
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("rsync failed: %w", err)
-	}
-
-	return nil
+	return cmd.Run()
 }
 
 // CopyFiles copies multiple test files
