@@ -8,6 +8,6 @@
 ~*
 .DS_Store
 .idea
-.claude/
 test-lfs-repo/
 bin/
+/.claude/settings.local.json

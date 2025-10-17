@@ -15,6 +15,7 @@ type Config struct {
 	RemoteHost   string `yaml:"remote_host"`
 	AutoRemote   bool   `yaml:"auto_remote"`
 	TestDataPath string `yaml:"test_data"`
+	WorkDir      string `yaml:"work_dir"`
 }
 
 // DefaultConfig returns the default configuration
@@ -29,6 +30,7 @@ func DefaultConfig() *Config {
 		RemoteHost:   "gojira",
 		AutoRemote:   true,
 		TestDataPath: "/mnt/f/work/git/git_lfs_test_data",
+		WorkDir:      "/tmp/lfst",
 	}
 }
 
@@ -67,6 +69,9 @@ func Load() (*Config, error) {
 	}
 	if testData := os.Getenv("LFS_TEST_DATA"); testData != "" {
 		cfg.TestDataPath = testData
+	}
+	if workDir := os.Getenv("LFS_WORK_DIR"); workDir != "" {
+		cfg.WorkDir = workDir
 	}
 
 	return cfg, nil
@@ -149,6 +154,24 @@ func (cfg *Config) GetDatabasePath() string {
 // Supports patterns like ~/path, $work/path, and ${work}/path
 func (cfg *Config) GetTestDataPath() string {
 	path := cfg.TestDataPath
+
+	// Expand tilde
+	if len(path) > 0 && path[0] == '~' {
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			path = filepath.Join(homeDir, path[2:])
+		}
+	}
+
+	// Expand environment variables ($VAR and ${VAR})
+	path = os.ExpandEnv(path)
+
+	return path
+}
+
+// GetWorkDir returns the work directory path, expanding ~/ and environment variables
+func (cfg *Config) GetWorkDir() string {
+	path := cfg.WorkDir
 
 	// Expand tilde
 	if len(path) > 0 && path[0] == '~' {

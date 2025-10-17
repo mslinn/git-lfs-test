@@ -168,9 +168,10 @@ database: /home/mslinn/lfs_eval/lfs-test.db
 remote_host: gojira
 auto_remote: true
 test_data: $work/git/git_lfs_test_data
+work_dir: /tmp/lfst
 ```
 
-**Note:** The `test_data` path can use shell variable expansion. If using `$work/git/git_lfs_test_data`, you must set `export work=/your/base/path` in your shell environment, or commands will fail.
+**Note:** The `test_data` and `work_dir` paths can use shell variable expansion. If using `$work/git/git_lfs_test_data`, you must set `export work=/your/base/path` in your shell environment, or commands will fail.
 
 ### Environment Variables
 
@@ -182,13 +183,15 @@ Environment variables override config file settings:
 - `LFS_TEST_CONFIG` - Path to config file (default: `~/.lfs-test-config`)
 - `LFS_REMOTE_HOST` - Remote host for SSH operations (overrides `remote_host` in config file)
 - `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0` (overrides `auto_remote` in config file)
+- `LFS_WORK_DIR` - Working directory for test execution (overrides `work_dir` in config file; default: `/tmp/lfst`)
+
 
 ### Command-line Flags
 
 All commands accept a `--db` flag to override the database location:
 
 ```shell
-$ lfst scenario --db /tmp/my-test.db 6
+$ lfst scenario --db $HOME/my-test.db 6
 ```
 
 
@@ -226,18 +229,67 @@ Or cancel all running tests:
 $ lfst scenario --cancel all
 ```
 
-The lfst framework supports canceling tests:
+The lfst framework supports canceling tests with this mechanism:
 
-  1. Tracks PIDs: Each test run now stores the process ID (`pid`) when it starts
-  2. Database Migration: Automatically adds the `pid` column to existing databases
-  3. Controlled Termination:
-    - Sends `SIGTERM` first (graceful shutdown)
-    - Waits 2 seconds
-    - If process still running, sends `SIGKILL` (forceful)
-  4. Cleanup: Removes working directories (`/tmp/lfst/repo1` and `/tmp/lfst/repo2`)
+  1. Each test run now stores its process ID (`pid`) when it starts
+  2. Automatically adds the `pid` column to existing databases
+  3. Implements and orderly shutdown procedure:
+
+     - Sends `SIGTERM` to the process (graceful shutdown)
+     - Waits 2 seconds
+     - If process still running, sends `SIGKILL` (forceful)
+
+  4. Removes working directories (`/tmp/lfst/repo1` and `/tmp/lfst/repo2`)
   5. Status Update: Marks run as `cancelled` in database with timestamp
 
 Stale runs with processes that no longer exist are cancelled in the same way.
+
+### Inspect repository details
+
+View detailed repository contents for any test run:
+
+```shell
+$ lfst scenario --detail 1
+```
+
+This shows all files in both `repo1` and `repo2` with:
+- **File name** - Relative path within the repository
+- **Size** - Formatted as bytes, KB, MB, or GB
+- **Storage type** - Where the file is stored:
+  - `LFS (tracked)` - File tracked by Git LFS
+  - `Git (regular)` - Regular Git object
+  - `Untracked` - Not tracked by Git
+  - `Ignored` - Matched by .gitignore
+
+The output also includes a summary with total file count, total size, and counts for each storage type.
+
+**Example output:**
+```
+Repository Details for Run 2
+  Scenario: 1
+  Status: completed
+  Started: 2025-10-17 10:30:45
+
+=== First Repository (repo1) ===
+Location: /tmp/lfst/repo1
+
+File                                                       Size  Storage
+-------------------------------------------------- ------------  --------------------
+.gitattributes                                             29 B  Git (regular)
+README.md                                               1.23 KB  Git (regular)
+pdf1.pdf                                              204.20 MB  Git (regular)
+video2.mov                                            397.44 MB  Git (regular)
+...
+
+Summary:
+  Total files: 7 (1.20 GB)
+  LFS tracked: 0
+  Git regular: 7
+  Untracked:   0
+  Ignored:     0
+```
+
+**Note:** The `--detail` option only works if the test repositories still exist in the work directory. If the test has been cancelled or the work directory has been cleaned up, the repositories will not be available for inspection.
 
 
 ## Architecture

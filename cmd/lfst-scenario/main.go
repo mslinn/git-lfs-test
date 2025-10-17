@@ -1,16 +1,19 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/mslinn/git-lfs-test/pkg/config"
 	"github.com/mslinn/git-lfs-test/pkg/database"
 	"github.com/mslinn/git-lfs-test/pkg/scenario"
+	"github.com/mslinn/git-lfs-test/pkg/timing"
 	"github.com/spf13/pflag"
 )
 
@@ -47,9 +50,11 @@ func main() {
 	pflag.BoolVarP(&debug, "verbose", "v", false, "Enable verbose output (alias for --debug)")
 	pflag.BoolVarP(&force, "force", "f", false, "Force recreation of existing repositories")
 	pflag.StringVar(&dbPath, "db", "", "Path to SQLite database (default from config)")
-	pflag.StringVar(&workDir, "work-dir", "/tmp/lfst", "Working directory for test execution")
+	pflag.StringVar(&workDir, "work-dir", "", "Working directory for test execution (default from config)")
 	pflag.BoolVar(&listOnly, "list", false, "List available scenarios and exit")
 	pflag.StringVar(&cancelArg, "cancel", "", "Cancel a running test: run ID or 'all'")
+	var detailArg string
+	pflag.StringVar(&detailArg, "detail", "", "Show detailed repository contents for a run ID")
 
 	pflag.Parse()
 
@@ -71,9 +76,30 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Load configuration early for defaults
+	cfg, err := config.Load()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Use config values if not overridden
+	if dbPath == "" {
+		dbPath = cfg.GetDatabasePath()
+	}
+	if workDir == "" {
+		workDir = cfg.GetWorkDir()
+	}
+
 	// Handle cancel
 	if cancelArg != "" {
 		handleCancel(cancelArg, dbPath, workDir)
+		os.Exit(0)
+	}
+
+	// Handle detail
+	if detailArg != "" {
+		handleDetail(detailArg, dbPath, workDir)
 		os.Exit(0)
 	}
 
@@ -96,18 +122,6 @@ func main() {
 	if !ok {
 		fmt.Fprintf(os.Stderr, "Error: scenario %d not found (use --list to see available scenarios)\n", scenarioID)
 		os.Exit(1)
-	}
-
-	// Load configuration
-	cfg, err := config.Load()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Use config database if not overridden
-	if dbPath == "" {
-		dbPath = cfg.GetDatabasePath()
 	}
 
 	// Validate database (creates directory if needed)
@@ -136,19 +150,212 @@ func main() {
 	fmt.Printf("  View results: lfst-run show %d\n", runner.RunID)
 }
 
-func handleCancel(cancelArg, dbPath, workDir string) {
-	// Load configuration
-	cfg, err := config.Load()
+func handleDetail(detailArg, dbPath, workDir string) {
+	// Parse run ID
+	runID, err := strconv.ParseInt(detailArg, 10, 64)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: invalid run ID '%s'\n", detailArg)
 		os.Exit(1)
 	}
 
-	// Use config database if not overridden
-	if dbPath == "" {
-		dbPath = cfg.GetDatabasePath()
+	// Open database
+	db, err := database.Open(dbPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error opening database: %v\n", err)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	// Get run info
+	run, err := db.GetTestRun(runID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: run %d not found\n", runID)
+		os.Exit(1)
 	}
 
+	fmt.Printf("Repository Details for Run %d\n", runID)
+	fmt.Printf("  Scenario: %d\n", run.ScenarioID)
+	fmt.Printf("  Status: %s\n", run.Status)
+	fmt.Printf("  Started: %s\n", run.StartedAt.Format("2006-01-02 15:04:05"))
+	fmt.Println()
+
+	// Check if repositories exist
+	repo1Dir := filepath.Join(workDir, "repo1")
+	repo2Dir := filepath.Join(workDir, "repo2")
+
+	repos := []struct {
+		name string
+		path string
+	}{
+		{"First Repository (repo1)", repo1Dir},
+		{"Second Repository (repo2)", repo2Dir},
+	}
+
+	for _, repo := range repos {
+		if _, err := os.Stat(repo.path); os.IsNotExist(err) {
+			fmt.Printf("%s: Not found (may have been cleaned up)\n", repo.name)
+			fmt.Println()
+			continue
+		}
+
+		fmt.Printf("=== %s ===\n", repo.name)
+		fmt.Printf("Location: %s\n\n", repo.path)
+
+		// Show repository details
+		if err := showRepositoryDetails(repo.path); err != nil {
+			fmt.Printf("Error: %v\n\n", err)
+		}
+	}
+}
+
+func showRepositoryDetails(repoDir string) error {
+	// Get LFS tracked files
+	lfsResult := timing.Run("git", []string{"-C", repoDir, "lfs", "ls-files", "-n"}, nil)
+	lfsFiles := make(map[string]bool)
+	if lfsResult.Error == nil && lfsResult.ExitCode == 0 {
+		scanner := bufio.NewScanner(strings.NewReader(lfsResult.Stdout))
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line != "" {
+				lfsFiles[line] = true
+			}
+		}
+	}
+
+	// Get git status to find untracked and ignored files
+	statusResult := timing.Run("git", []string{"-C", repoDir, "status", "--porcelain", "--ignored"}, nil)
+	untrackedFiles := make(map[string]bool)
+	ignoredFiles := make(map[string]bool)
+	if statusResult.Error == nil && statusResult.ExitCode == 0 {
+		scanner := bufio.NewScanner(strings.NewReader(statusResult.Stdout))
+		for scanner.Scan() {
+			line := scanner.Text()
+			if len(line) < 3 {
+				continue
+			}
+			status := line[0:2]
+			fileName := strings.TrimSpace(line[3:])
+
+			if strings.HasPrefix(status, "?") {
+				untrackedFiles[fileName] = true
+			} else if strings.HasPrefix(status, "!") {
+				ignoredFiles[fileName] = true
+			}
+		}
+	}
+
+	// Get all files in the repository (excluding .git)
+	type FileInfo struct {
+		Name    string
+		Size    int64
+		Storage string
+	}
+	var files []FileInfo
+
+	err := filepath.Walk(repoDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip .git directory
+		if info.IsDir() && info.Name() == ".git" {
+			return filepath.SkipDir
+		}
+
+		// Skip directories
+		if info.IsDir() {
+			return nil
+		}
+
+		// Get relative path
+		relPath, err := filepath.Rel(repoDir, path)
+		if err != nil {
+			return err
+		}
+
+		// Determine storage type
+		storage := "Git (regular)"
+		if lfsFiles[relPath] {
+			storage = "LFS (tracked)"
+		} else if untrackedFiles[relPath] {
+			storage = "Untracked"
+		} else if ignoredFiles[relPath] {
+			storage = "Ignored"
+		}
+
+		files = append(files, FileInfo{
+			Name:    relPath,
+			Size:    info.Size(),
+			Storage: storage,
+		})
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to walk directory: %w", err)
+	}
+
+	// Print file listing
+	fmt.Printf("%-50s %12s  %s\n", "File", "Size", "Storage")
+	fmt.Printf("%-50s %12s  %s\n", strings.Repeat("-", 50), strings.Repeat("-", 12), strings.Repeat("-", 20))
+
+	totalSize := int64(0)
+	lfsCount := 0
+	gitCount := 0
+	untrackedCount := 0
+	ignoredCount := 0
+
+	for _, f := range files {
+		// Format size
+		sizeStr := formatSize(f.Size)
+		fmt.Printf("%-50s %12s  %s\n", f.Name, sizeStr, f.Storage)
+
+		totalSize += f.Size
+		switch f.Storage {
+		case "LFS (tracked)":
+			lfsCount++
+		case "Git (regular)":
+			gitCount++
+		case "Untracked":
+			untrackedCount++
+		case "Ignored":
+			ignoredCount++
+		}
+	}
+
+	fmt.Println()
+	fmt.Printf("Summary:\n")
+	fmt.Printf("  Total files: %d (%s)\n", len(files), formatSize(totalSize))
+	fmt.Printf("  LFS tracked: %d\n", lfsCount)
+	fmt.Printf("  Git regular: %d\n", gitCount)
+	fmt.Printf("  Untracked:   %d\n", untrackedCount)
+	fmt.Printf("  Ignored:     %d\n", ignoredCount)
+	fmt.Println()
+
+	return nil
+}
+
+func formatSize(bytes int64) string {
+	const (
+		KB = 1024
+		MB = 1024 * KB
+		GB = 1024 * MB
+	)
+
+	switch {
+	case bytes >= GB:
+		return fmt.Sprintf("%.2f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.2f MB", float64(bytes)/float64(MB))
+	case bytes >= KB:
+		return fmt.Sprintf("%.2f KB", float64(bytes)/float64(KB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
+}
+
+func handleCancel(cancelArg, dbPath, workDir string) {
 	// Open database
 	db, err := database.Open(dbPath)
 	if err != nil {
