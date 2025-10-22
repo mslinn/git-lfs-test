@@ -35,6 +35,13 @@ The Git LFS Test framework was developed as part of the [Git LFS evaluation seri
 - SSH access for remote test data (optional)
 - GitHub CLI (`gh`) for GitHub scenarios (optional)
 
+### Quick Installation
+
+```shell
+$ go install github.com/mslinn/git-lfs-test@latest
+```
+
+
 ### Install from source
 
 ```shell
@@ -44,15 +51,17 @@ $ cd git-lfs-test
 $ make install
 ```
 
-This installs all commands to `/usr/local/bin/`:
+### Inventory
 
-- `lfst` - Unified command (dispatches to individual tools)
+The above installs all commands to `~/go/bin/`:
+
+- `lfst`          - Unified command (dispatches to individual tools)
 - `lfst-scenario` - Execute complete 7-step test scenarios
 - `lfst-checksum` - Compute and store checksums
-- `lfst-import` - Import checksum JSON data
-- `lfst-run` - Manage test run lifecycle
-- `lfst-query` - Query and report on test data
-- `lfst-config` - Manage configuration
+- `lfst-import`   - Import checksum JSON data
+- `lfst-run`      - Manage test run lifecycle
+- `lfst-query`    - Query and report on test data
+- `lfst-config`   - Manage configuration
 
 You can use either the unified `lfst` command:
 ```shell
@@ -89,16 +98,33 @@ $ lfst config set test_data $work/git/git_lfs_test_data
 $ lfst config show
 ```
 
-**Important:** If you use `$work/git/git_lfs_test_data` as your test data path, the `work` environment variable must be set, or commands will fail with an error.
+**Important:** If you use `$work/git/git_lfs_test_data` as your test data path, 
+the `work` environment variable must be set, or commands will fail with an error.
 
 2. **Set up test data:**
 
-You need 2.4GB of test files. The test data location can be configured:
-- In the config file: `lfst config set test_data $work/git/git_lfs_test_data` (recommended)
-- Via environment variable: `export LFS_TEST_DATA=$work/git/git_lfs_test_data`
-- For remote access via SSH: `export LFS_TEST_DATA=server:$work/git/git_lfs_test_data`
+The test files consume 2.4GB. The test data location can be configured:
 
-Recommended location: `$work/git/git_lfs_test_data` (requires `work` env var to be set)
+- In the config file: (recommended)
+  
+  ```shell
+  lfst config set test_data $work/git/git_lfs_test_data
+  ``` 
+
+- Via environment variable: 
+
+  ```shell
+  export LFS_TEST_DATA=$work/git/git_lfs_test_data
+  ```
+
+- For remote access via SSH: 
+
+  ```shell
+  export LFS_TEST_DATA=server:$work/git/git_lfs_test_data
+  ```
+
+Recommended location: `$work/git/git_lfs_test_data`
+
 
 3. **List available scenarios:**
 
@@ -114,6 +140,7 @@ ID  Server             Protocol  Git Server  Description
 7   lfs-test-server    http      github      LFS Test Server - HTTP/GitHub
 ...
 ```
+
 
 4. **Run a test scenario:**
 
