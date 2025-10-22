@@ -1,4 +1,4 @@
-# Running Test Scenario 1
+# Running Test Scenario 6
 
 ```shell
 # Run scenario 6 (LFS Test Server - HTTP) with debug output
