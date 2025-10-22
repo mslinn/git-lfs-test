@@ -20,7 +20,7 @@ type Scenario struct {
 	ServerType string // 'lfs-test-server', 'giftless', 'rudolfs', 'bare'
 	Protocol   string // 'http', 'https', 'ssh', 'local'
 	GitServer  string // 'bare', 'github'
-	ServerURL  string // e.g., "http://gojira:8080"
+	ServerURL  string // e.g., "http://gojira:8079"
 	RepoName   string // GitHub repository name (e.g., "username/lfs-eval-test")
 }
 

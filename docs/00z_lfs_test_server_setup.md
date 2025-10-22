@@ -14,50 +14,22 @@ For automated testing, `lfs-test-server` must be configured with:
 
 ## Server Configuration
 
+### 0. Clone the `git_lfs_scripts_bash` repository
+
+Also define an environment variable called `git_lfs_scripts_bash` for easy reference.
+
+```shell
+git clone git@github.com:mslinn/git_lfs_scripts_bash.git
+cd git_lfs_scripts_bash
+echo "export git_lfs_scripts_bash=`pwd`" >> "$work/.evars"
+source "$work/.evars"
+```
+
 ### 1. Start lfs-test-server with Admin Interface
 
-Create the following startup script at `/opt/lfs-test-server/start-lfs-server.sh`.
+Run the startup script at `$git_lfs_scripts_bash/bin/start-lfs-server`.
 The script overwrites `/opt/lfs-test/server/lfs-server.log` each time it runs.
 
-```bash
-#!/bin/bash
-# Start lfs-test-server with admin interface enabled
-
-export LFS_CONTENTPATH=/opt/lfs-test-server
-export LFS_ADMINUSER=admin
-export LFS_ADMINPASS=admin123
-
-# Install lfs-test-server if not found
-if [ ! `which lfs-test-server` ]; then
-  go install github.com/git-lfs/lfs-test-server@latest
-fi
-
-export LFS_REPO=/opt/lfs-test-server
-export LFS_PORT=8080
-export SERVER=`uname -n`
-export LOG_FILE="$LFS_REPO/lfs-server.log"
-
-cd "$LFS_REPO" | exit 1
-
-# Kill any existing instance
-pkill lfs-test-server
-
-rm "$LOG_FILE" # Not everyone might want this
-
-# Start server in background with verbose logging
-nohup ~/go/bin/lfs-test-server -verbose -addr :$LFS_PORT &> "$LOG_FILE" &
-
-echo "LFS Test Server started on $SERVER:$LFS_PORT"
-echo "Admin interface: http://$SERVER:$LFS_PORT/mgmt"
-echo "Tailing $SERVER:$LOG_FILE..."
-tail -f "$LOG_FILE"
-```
-
-Make it executable:
-
-```bash
-chmod +x "/opt/lfs-test-server/start-lfs-server.sh"
-```
 
 ### 2. Start the Server
 
@@ -67,19 +39,19 @@ To start the server manually on gojira:
 
 ```bash
 # On gojira directly
-/opt/lfs-test-server/start-lfs-server.sh
+$git_lfs_scripts_bash/bin/start-lfs-server.sh
 
 # Or from a remote client
-ssh gojira "/opt/lfs-test-server/start-lfs-server.sh"
+ssh gojira -t "bash -ic '\$git_lfs_scripts_bash/bin/start-lfs-server.sh'"
 ```
 
 This will:
 
 - Kill any existing lfs-test-server instance
-- Start a new instance with admin interface and verbose logging
+- Start a new instance with the adminastrative interface and verbose logging
 - Display server status information
 
-**Important:** The server runs in the background using `nohup` and continues
+The server runs in the background using `nohup` and continues
 running even after you log out. You don't need to keep your SSH session open.
 
 #### Automatic Start on Boot
@@ -91,7 +63,7 @@ To start the server automatically when gojira boots, add this line to crontab:
 crontab -e
 
 # Add this line:
-@reboot sleep 60 && /opt/lfs-test-server/start-lfs-server.sh
+@reboot /opt/lfs-test-server/start-lfs-server.sh
 ```
 
 The 60-second delay ensures the network is fully initialized before starting the server.
@@ -120,13 +92,13 @@ The test user account is required for all LFS operations. Create it once via the
 ```bash
 curl -u admin:admin123 -X POST \
   -d "name=testuser&password=testpass" \
-  http://gojira:8080/mgmt/add
+  http://gojira:8079/mgmt/add
 ```
 
 Verify user was created:
 
 ```bash
-curl -s -u admin:admin123 http://gojira:8080/mgmt/users | grep testuser
+curl -s -u admin:admin123 http://gojira:8079/mgmt/users | grep testuser
 ```
 
 **Note:** The test user only needs to be created once. The user account is stored in the database (`/opt/lfs-test-server/lfs.db`) and persists across server restarts and reboots. You don't need to recreate the user after restarting the server.
@@ -137,7 +109,7 @@ For automated testing without credential prompts, embed credentials in the LFS U
 
 ```ini
 [lfs]
-	url = http://testuser:testpass@gojira:8080
+	url = http://testuser:testpass@gojira:8079
 ```
 
 This allows Git LFS to authenticate automatically without user interaction.
@@ -149,7 +121,7 @@ The following environment variables control lfs-test-server behavior:
 - **LFS_CONTENTPATH**: Directory for LFS object storage (default: `./lfs-content`)
 - **LFS_ADMINUSER**: Admin username for `/mgmt` interface (no default)
 - **LFS_ADMINPASS**: Admin password for `/mgmt` interface (no default)
-- **LFS_HOST**: Server listen address (default: `localhost:8080`)
+- **LFS_HOST**: Server listen address (default: `localhost:8079`)
 
 ## Security Note
 
@@ -166,7 +138,7 @@ git init
 git lfs install
 
 # Configure LFS URL with credentials
-git config -f .lfsconfig lfs.url "http://testuser:testpass@gojira:8080"
+git config -f .lfsconfig lfs.url "http://testuser:testpass@gojira:8079"
 
 # Track and commit a test file
 echo "test" > test.txt
@@ -195,7 +167,7 @@ ssh gojira "tail -f /opt/lfs-test-server/lfs-server.log"
 
 ```bash
 ssh gojira "ps aux | grep lfs-test-server | grep -v grep"
-curl -v http://gojira:8080/
+curl -v http://gojira:8079/
 ```
 
 ### Verify Automatic Startup After Reboot
@@ -210,10 +182,10 @@ ssh gojira "ps aux | grep lfs-test-server | grep -v grep"
 ssh gojira "tail -20 /opt/lfs-test-server/lfs-server.log"
 
 # Verify server is responding
-curl -v http://gojira:8080/
+curl -v http://gojira:8079/
 
 # Confirm test user still exists (should persist)
-curl -s -u admin:admin123 http://gojira:8080/mgmt/users | grep testuser
+curl -s -u admin:admin123 http://gojira:8079/mgmt/users | grep testuser
 ```
 
 If the server didn't start automatically, check the crontab:
