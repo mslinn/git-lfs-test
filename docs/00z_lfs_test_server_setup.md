@@ -35,27 +35,28 @@ fi
 export LFS_REPO=/opt/lfs-test-server
 export LFS_PORT=8080
 export SERVER=`uname -n`
-export LOG_FILE=$LFS_REPO/lfs-server.log
+export LOG_FILE="$LFS_REPO/lfs-server.log"
 
 cd "$LFS_REPO" | exit 1
 
 # Kill any existing instance
-pkill -f lfs-test-server
+pkill lfs-test-server
+
+rm "$LOG_FILE" # Not everyone might want this
 
 # Start server in background with verbose logging
-nohup ~/go/bin/lfs-test-server -verbose -addr :$LFS_PORT > lfs-server.log 2>&1 &
+nohup ~/go/bin/lfs-test-server -verbose -addr :$LFS_PORT &> "$LOG_FILE" &
 
-echo "LFS Test Server started on port $LFS_PORT"
+echo "LFS Test Server started on $SERVER:$LFS_PORT"
 echo "Admin interface: http://$SERVER:$LFS_PORT/mgmt"
-echo "Log file: $SERVER:$LOG_FILE"
-echo "Tailing log file..."
+echo "Tailing $SERVER:$LOG_FILE..."
 tail -f "$LOG_FILE"
 ```
 
 Make it executable:
 
 ```bash
-chmod +x "$LFS_REPO/start-lfs-server.sh"
+chmod +x "/opt/lfs-test-server/start-lfs-server.sh"
 ```
 
 ### 2. Start the Server
