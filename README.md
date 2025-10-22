@@ -98,7 +98,7 @@ $ lfst config set test_data $work/git/git_lfs_test_data
 $ lfst config show
 ```
 
-**Important:** If you use `$work/git/git_lfs_test_data` as your test data path, 
+**Important:** If you use `$work/git/git_lfs_test_data` as your test data path,
 the `work` environment variable must be set, or commands will fail with an error.
 
 2. **Set up test data:**
@@ -106,18 +106,18 @@ the `work` environment variable must be set, or commands will fail with an error
 The test files consume 2.4GB. The test data location can be configured:
 
 - In the config file: (recommended)
-  
+
   ```shell
   lfst config set test_data $work/git/git_lfs_test_data
-  ``` 
+  ```
 
-- Via environment variable: 
+- Via environment variable:
 
   ```shell
   export LFS_TEST_DATA=$work/git/git_lfs_test_data
   ```
 
-- For remote access via SSH: 
+- For remote access via SSH:
 
   ```shell
   export LFS_TEST_DATA=server:$work/git/git_lfs_test_data
@@ -181,7 +181,7 @@ The framework executes a standardized 7-step test procedure:
 6. **First Client Pull**: Pull changes from remote, verify checksums
 7. **Untrack**: Remove files from LFS tracking, migrate back to regular Git
 
-For detailed documentation, see [history/scenario1.md](history/scenario1.md).
+For detailed documentation, see [instructions/scenario1.md](instructions/scenario1.md).
 
 
 ## Configuration
