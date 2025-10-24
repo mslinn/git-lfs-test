@@ -1,3 +1,5 @@
+lfs_test_data.sh
+create_lfs_eval_repo.sh
 *.sublime*
 *.swp
 *.out

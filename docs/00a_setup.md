@@ -23,12 +23,14 @@ $ make install
 
 This installs all commands to `/usr/local/bin/`:
 
-- `lfst-scenario` - Execute complete 7-step test scenarios
-- `lfst-checksum` - Compute and store checksums
-- `lfst-import` - Import checksum JSON data
-- `lfst-run` - Manage test run lifecycle
-- `lfst-query` - Query and report on test data
-- `lfst-config` - Manage configuration
+- `lfst-checksum`  - Compute and store checksums
+- `lfst-config`    - Manage configuration
+- `lfst-eval-repo` - Create a standard test repository
+- `lfst-import`    - Import checksum JSON data
+- `lfst-query`     - Query and report on test data
+- `lfst-run`       - Manage test run lifecycle
+- `lfst-scenario`  - Execute complete 7-step test scenarios
+- `lfst-testdata`  - Create test data
 
 The database is created automatically at first use at
 `gojira:/home/mslinn/lfs_eval/lfs-test.db`
