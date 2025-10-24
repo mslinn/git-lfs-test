@@ -21,6 +21,8 @@ var subcommands = []struct {
 	{"import", "Import checksum data"},
 	{"run", "Manage test run lifecycle"},
 	{"query", "Query and report on test data"},
+	{"testdata", "Download Git LFS test data files"},
+	{"create-eval-repo", "Create Git LFS evaluation repository"},
 }
 
 func main() {
@@ -139,11 +141,17 @@ func printHelp() {
 	fmt.Printf("       lfst config init\n")
 	fmt.Printf("       lfst config set test_data $work/git/git_lfs_test_data\n\n")
 
-	fmt.Printf("  2. List available scenarios:\n")
+	fmt.Printf("  2. Download test data:\n")
+	fmt.Printf("       lfst testdata\n\n")
+
+	fmt.Printf("  3. List available scenarios:\n")
 	fmt.Printf("       lfst scenario --list\n\n")
 
-	fmt.Printf("  3. Run a test scenario:\n")
+	fmt.Printf("  4. Run a test scenario:\n")
 	fmt.Printf("       lfst scenario 6\n\n")
+
+	fmt.Printf("  5. Create evaluation repository (optional):\n")
+	fmt.Printf("       lfst create-eval-repo 3\n\n")
 
 	fmt.Printf("For detailed help on any command:\n")
 	fmt.Printf("  lfst <command> --help\n\n")

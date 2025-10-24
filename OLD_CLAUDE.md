@@ -78,33 +78,3 @@ I favor `-d` as a flag for enabling debug output.
 ### Step 5
 
 Summarize and publish the results and the source code.
-
-
-## Standing Orders
-
-- Claude, you and I have collaborated very effectively on 3 nontrivial projects.
-  You have been most helpful, however, you consistently mess up the current working
-  directory when running shell commands. A good workaround for Git that you should ALWAYS
-  use is to specify the -C option, so you can explicitly state the directory the command
-  should run in. Do something similar with all other command line programs launched
-  from a shell, if possible.
-
-- Posix standards are to be respected. For command-line Go programs, this means using pflags
-  instead of flags.
-
-- Executables should verify their dependencies are available before attempting to
-  utilize them. If a dependency can be installed, it should automatically be installed
-  and a message shown to the user.
-
-- All programs need a comprehensive help message, responsive to -h/--help.
-  The message should include the software version.
-
-- Go programs need a release program.
-  Following are two good examples of structure, implementation, and documentation.
-  These examples should be followed closely:
-  - local: `/mnt/f/work/dl`; GitHub: `https://github.com/mslinn/dl`
-  - local: `/mnt/f/work/git/git_tree`; GitHub: `https://github.com/mslinn/git_tree`
-
-- All programs need comprehensive unit tests.
-
-- Make a commit for every action you take with a  message.

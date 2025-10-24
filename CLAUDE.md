@@ -19,3 +19,9 @@
 
 - All programs need a comprehensive help message, responsive to -h/--help.
   The message should include the software version.
+
+- Go programs need a release program.
+  The release program is not visible to end users, just to developers.
+  Following is a good example of structure, implementation, and documentation.
+  This example should be followed closely, in particular use v2 of `goreleaser`:
+  - local: `/mnt/f/work/git/git_lfs_scripts_go`; GitHub: `https://github.com/mslinn/git_lfs_scripts_go`

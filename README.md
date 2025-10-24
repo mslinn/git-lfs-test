@@ -2,12 +2,16 @@
 
 Comprehensive testing framework for evaluating Git LFS server implementations.
 
-This framework automates the evaluation of various Git LFS servers through a standardized 7-step test procedure, with full checksum verification and performance tracking.
+This framework automates the evaluation of various Git LFS servers through a
+standardized 7-step test procedure,
+with checksum verification and performance tracking.
 
 
 ## Overview
 
-The Git LFS Test framework was developed as part of the [Git LFS evaluation series on mslinn.com](https://www.mslinn.com/git/5100-git-lfs.html). It provides automated testing for:
+The Git LFS Test framework was developed as part of the
+[Git LFS evaluation series on mslinn.com](https://www.mslinn.com/git/5100-git-lfs.html).
+It provides automated testing for:
 
 - **Bare Git repositories** (local and SSH)
 - **LFS Test Server** (HTTP and GitHub)
@@ -55,21 +59,25 @@ $ make install
 
 The above installs all commands to `~/go/bin/`:
 
-- `lfst`          - Unified command (dispatches to individual tools)
-- `lfst-scenario` - Execute complete 7-step test scenarios
-- `lfst-checksum` - Compute and store checksums
-- `lfst-import`   - Import checksum JSON data
-- `lfst-run`      - Manage test run lifecycle
-- `lfst-query`    - Query and report on test data
-- `lfst-config`   - Manage configuration
+- `lfst`                   - Unified command (dispatches to individual tools)
+- `lfst-scenario`          - Execute complete 7-step test scenarios
+- `lfst-checksum`          - Compute and store checksums
+- `lfst-import`            - Import checksum JSON data
+- `lfst-run`               - Manage test run lifecycle
+- `lfst-query`             - Query and report on test data
+- `lfst-config`            - Manage configuration
+- `lfst-testdata`          - Download Git LFS test data files
+- `lfst-create-eval-repo`  - Create Git LFS evaluation repository
 
 You can use either the unified `lfst` command:
+
 ```shell
 $ lfst config show
 $ lfst scenario --list
 ```
 
 Or the individual commands directly:
+
 ```shell
 $ lfst-config show
 $ lfst-scenario --list
@@ -80,100 +88,125 @@ $ lfst-scenario --list
 
 1. **Configure the test environment:**
 
-First, set the `work` environment variable (required for the recommended test data location):
+    First, set the `work` environment variable (required for the recommended test data location):
 
-```shell
-$ export work=/mnt/f/work  # or your preferred base directory
-```
+    ```shell
+    $ export work=/mnt/f/work  # or your preferred base directory
+    ```
 
-Then configure the framework:
+    Then configure the framework:
 
-```shell
-$ lfst config init
-Created config file: /home/mslinn/.lfs-test-config
+    ```shell
+    $ lfst config init
+    Created config file: /home/mslinn/.lfs-test-config
 
-$ lfst config set database /path/to/your/test.db
-$ lfst config set remote_host your-server
-$ lfst config set test_data $work/git/git_lfs_test_data
-$ lfst config show
-```
+    $ lfst config set database /path/to/your/test.db
+    $ lfst config set remote_host your-server
+    $ lfst config set test_data $work/git/git_lfs_test_data
+    $ lfst config show
+    ```
 
-**Important:** If you use `$work/git/git_lfs_test_data` as your test data path,
-the `work` environment variable must be set, or commands will fail with an error.
+    **Important:** If you use `$work/git/git_lfs_test_data` as your test data path,
+    the `work` environment variable must be set, or commands will fail with an error.
 
-2. **Set up test data:**
+2. **Download test data:**
 
-The test files consume 2.4GB. The test data location can be configured:
+    The test files consume 2.4GB and must be downloaded before running tests:
 
-- In the config file: (recommended)
+    ```shell
+    $ lfst testdata
+    # or
+    $ lfst-testdata
+    ```
 
-  ```shell
-  lfst config set test_data $work/git/git_lfs_test_data
-  ```
+    This downloads files to the configured test data location. The test data location can be configured:
 
-- Via environment variable:
+    - In the config file: (recommended)
 
-  ```shell
-  export LFS_TEST_DATA=$work/git/git_lfs_test_data
-  ```
+      ```shell
+      lfst config set test_data $work/git/git_lfs_test_data
+      ```
 
-- For remote access via SSH:
+    - Via environment variable:
 
-  ```shell
-  export LFS_TEST_DATA=server:$work/git/git_lfs_test_data
-  ```
+      ```shell
+      export LFS_TEST_DATA=$work/git/git_lfs_test_data
+      ```
 
-Recommended location: `$work/git/git_lfs_test_data`
+    - Via command-line flag:
 
+      ```shell
+      lfst testdata --dest $work/git/git_lfs_test_data
+      ```
+
+    - For remote access via SSH:
+
+      ```shell
+      export LFS_TEST_DATA=server:$work/git/git_lfs_test_data
+      ```
+
+    Recommended location: `$work/git/git_lfs_test_data`
 
 3. **List available scenarios:**
 
-```shell
-$ lfst scenario --list
-Available scenarios:
+    ```shell
+    $ lfst scenario --list
+    Available scenarios:
 
-ID  Server             Protocol  Git Server  Description
---  ------             --------  ----------  -----------
-1   bare               local     bare        Bare repo - local
-2   bare               ssh       bare        Bare repo - SSH
-6   lfs-test-server    http      bare        LFS Test Server - HTTP
-7   lfs-test-server    http      github      LFS Test Server - HTTP/GitHub
-...
-```
-
+    ID  Server             Protocol  Git Server  Description
+    --  ------             --------  ----------  -----------
+    1   bare               local     bare        Bare repo - local
+    2   bare               ssh       bare        Bare repo - SSH
+    6   lfs-test-server    http      bare        LFS Test Server - HTTP
+    7   lfs-test-server    http      github      LFS Test Server - HTTP/GitHub
+    ...
+    ```
 
 4. **Run a test scenario:**
 
-```shell
-$ lfst scenario -d 6
+    ```shell
+    $ lfst scenario -d 6
 
-=== Executing Scenario 6: LFS Test Server - HTTP ===
-Server: lfs-test-server via http
-Work directory: /tmp/lfst
+    === Executing Scenario 6: LFS Test Server - HTTP ===
+    Server: lfs-test-server via http
+    Work directory: /tmp/lfst
 
-Created test run ID: 1
+    Created test run ID: 1
 
---- Step 1 ---
-Initializing repository...
-  ✓ Initialized in 15ms
-...
-✓ Scenario 6 completed successfully
-```
+    --- Step 1 ---
+    Initializing repository...
+      ✓ Initialized in 15ms
+    ...
+    ✓ Scenario 6 completed successfully
+    ```
 
 5. **View results:**
 
-```shell
-$ lfst run show 1
-$ lfst query checksums --run-id 1 --step 1
-$ lfst query stats --run-id 1
-```
+    ```shell
+    $ lfst run show 1
+    $ lfst query checksums --run-id 1 --step 1
+    $ lfst query stats --run-id 1
+    ```
+
+6. **Create evaluation repositories (optional):**
+
+    For scenarios 3-9, you can create dedicated GitHub evaluation repositories:
+
+    ```shell
+    $ lfst create-eval-repo 3
+    # or
+    $ lfst-create-eval-repo 3
+    ```
+
+    This creates a private GitHub repository populated with test data for manual evaluation.
 
 
-## Test Scenarios
+## Standard 7-Step Test Sequence
 
 The framework executes a standardized 7-step test procedure:
 
-1. **Setup**: Create repository, install Git LFS, configure tracking patterns, copy initial test files (1.3GB)
+1. **Setup**: Create repository, install Git LFS, configure tracking patterns,
+   copy initial test files (1.3GB)
 2. **Initial Push**: Add and commit all files, verify checksums
 3. **Modifications**: Update 4 files, delete 2 files, rename 1 file, commit changes
 4. **Second Clone**: Clone repository to new location, verify checksums match
@@ -181,7 +214,8 @@ The framework executes a standardized 7-step test procedure:
 6. **First Client Pull**: Pull changes from remote, verify checksums
 7. **Untrack**: Remove files from LFS tracking, migrate back to regular Git
 
-For detailed documentation, see [instructions/scenario1.md](instructions/scenario1.md).
+For detailed documentation, see
+[instructions/scenario1.md](instructions/scenario1.md).
 
 
 ## Configuration
@@ -198,19 +232,26 @@ test_data: $work/git/git_lfs_test_data
 work_dir: /tmp/lfst
 ```
 
-**Note:** The `test_data` and `work_dir` paths can use shell variable expansion. If using `$work/git/git_lfs_test_data`, you must set `export work=/your/base/path` in your shell environment, or commands will fail.
+**Note:** The `test_data` and `work_dir` paths can use shell variable expansion.
+If using `$work/git/git_lfs_test_data`, you must set `export work=/your/base/path`
+in your shell environment, or commands will fail.
 
 ### Environment Variables
 
 Environment variables override config file settings:
 
-- `work` - Base directory for test data (required if using `$work/git/git_lfs_test_data` pattern)
-- `LFS_TEST_DATA` - Location of test data directory (overrides `test_data` in config file; recommended: `$work/git/git_lfs_test_data`)
-- `LFS_TEST_DB` - Database path (overrides `database` in config file)
+- `work`            - Base directory for test data
+  (required if using `$work/git/git_lfs_test_data` pattern)
+- `LFS_TEST_DATA`   - Location of test data directory
+   (overrides `test_data` in config file; recommended: `$work/git/git_lfs_test_data`)
+- `LFS_TEST_DB`     - Database path (overrides `database` in config file)
 - `LFS_TEST_CONFIG` - Path to config file (default: `~/.lfs-test-config`)
-- `LFS_REMOTE_HOST` - Remote host for SSH operations (overrides `remote_host` in config file)
-- `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0` (overrides `auto_remote` in config file)
-- `LFS_WORK_DIR` - Working directory for test execution (overrides `work_dir` in config file; default: `/tmp/lfst`)
+- `LFS_REMOTE_HOST` - Remote host for SSH operations
+  (overrides `remote_host` in config file)
+- `LFS_AUTO_REMOTE` - Enable auto-remote detection: `true`/`1` or `false`/`0`
+  (overrides `auto_remote` in config file)
+- `LFS_WORK_DIR`    - Working directory for test execution
+  (overrides `work_dir` in config file; default: `/tmp/lfst`)
 
 
 ### Command-line Flags
@@ -280,18 +321,20 @@ $ lfst scenario --detail 1
 ```
 
 This shows all files in both `repo1` and `repo2` with:
-- **File name** - Relative path within the repository
-- **Size** - Formatted as bytes, KB, MB, or GB
+
+- **File name**    - Relative path within the repository
+- **Size**         - Formatted as bytes, KB, MB, or GB
 - **Storage type** - Where the file is stored:
-  - `LFS (tracked)` - File tracked by Git LFS
-  - `Git (regular)` - Regular Git object
-  - `Untracked` - Not tracked by Git
-  - `Ignored` - Matched by .gitignore
+  - `LFS (tracked)`  - File tracked by Git LFS
+  - `Git (regular)`  - Regular Git object
+  - `Untracked`      - Not tracked by Git
+  - `Ignored`        - Matched by .gitignore
 
 The output also includes a summary with total file count, total size, and counts for each storage type.
 
 **Example output:**
-```
+
+```text
 Repository Details for Run 2
   Scenario: 1
   Status: completed
@@ -316,7 +359,9 @@ Summary:
   Ignored:     0
 ```
 
-**Note:** The `--detail` option only works if the test repositories still exist in the work directory. If the test has been cancelled or the work directory has been cleaned up, the repositories will not be available for inspection.
+**Note:** The `--detail` option only works if the test repositories still exist
+in the work directory. If the test has been cancelled or the work directory
+has been cleaned up, the repositories will not be available for inspection.
 
 
 ## Architecture
@@ -324,12 +369,13 @@ Summary:
 The framework is organized into several packages:
 
 - `pkg/checksum` - File checksumming with CRC32
-- `pkg/config` - Configuration management
+- `pkg/config`   - Configuration management
 - `pkg/database` - SQLite database operations with WAL mode
-- `pkg/git` - Git operations (clone, commit, push, pull)
+- `pkg/download` - HTTP download functionality with retry logic
+- `pkg/git`      - Git operations (clone, commit, push, pull)
 - `pkg/scenario` - Test scenario execution logic
 - `pkg/testdata` - Test file management with remote support
-- `pkg/timing` - Command execution with timing
+- `pkg/timing`   - Command execution with timing
 
 
 ## Contributing

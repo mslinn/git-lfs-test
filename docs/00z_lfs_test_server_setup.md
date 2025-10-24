@@ -159,6 +159,7 @@ git push origin master
 ### Server Logs
 
 Monitor server activity:
+
 ```bash
 ssh gojira "tail -f /opt/lfs-test-server/lfs-server.log"
 ```
@@ -197,6 +198,7 @@ ssh gojira "crontab -l | grep lfs-test-server"
 ### Reset Server
 
 To start fresh with a new database:
+
 ```bash
 ssh gojira "cd /opt/lfs-test-server && pkill lfs-test-server && mv lfs.db lfs.db.bak"
 /opt/lfs-test-server/start-lfs-server.sh
